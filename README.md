@@ -1,15 +1,20 @@
-# Congo River Basin SRR: RFP S-3 BASINLINK & BASINCAST
+# Congo River Basin SDR: RFP S-3 BASINLINK & BASINCAST
 
-Live demo for our System Requirements Review. It narrows the Congo Basin system-of-systems ConOps to what
-**RFP S-3** (space-based communications for sensors, responders and communities) must do, how we would build it,
-what it costs, and which requirements drive it. Flooding is the worked example; the same comms layer serves every hazard.
+The System Definition Review site for **RFP S-3** (space-based communications for sensors, responders and
+communities): the concept from the SRR, now designed with real equipment, link budgets, a 15-year cost by year,
+a design-space search and sensitivity analysis. Flooding is the worked example; the same comms layer serves every hazard.
 
-**Live:** https://corrigk.github.io/congo-river-basin-SRR/ · presenter link: https://corrigk.github.io/congo-river-basin-SRR/?present#conops
+**Live:** https://corrigk.github.io/congo-river-basin-SDR/ · **SDR workbench:** https://corrigk.github.io/congo-river-basin-SDR/#sdr
+
+**The SRR version** (frozen as reviewed) stays at https://corrigk.github.io/congo-river-basin-SRR/ (repo
+[congo-river-basin-SRR](https://github.com/corrigk/congo-river-basin-SRR)); this repo was copied from it with its full
+history. Requirements are edited on the separate requirements site
+([congo-srr-requirements](https://github.com/corrigk/congo-srr-requirements)).
 
 It is a concept visualization, not a live system. Requirement text and numbers are verbatim from the RFP (Appendix A
 of `docs/brief-v2.md`). Everything else carries a visible label on the page: **Assumption**, **Modeled proxy**,
-**Proposed allocation, TBR** or **Notional baseline, trade study pending**. The Sources drawer (**S**) lists every
-citation and explains the labels.
+**Proposed allocation, TBR**, **Notional baseline, trade study pending**, or, in the SDR workbench, **Published**,
+**Estimate** and **SRR assumption** with a source. The Sources drawer (**S**) lists every citation.
 
 ## Tabs
 
@@ -50,7 +55,7 @@ On a 1920×1080 or 1280×720 screen the result is 16:9.
 
 **Before presenting on a computer you don't control:** open the page once and wait for the badge in the top bar to
 read **Ready offline** (about 30 seconds on slow Wi-Fi; or click **Preload for offline**). After that everything,
-including the 3D globe, works with no network. If anything goes wrong, `srr-offline.html` is one file with the whole
+including the 3D globe, works with no network. If anything goes wrong, `sdr-offline.html` is one file with the whole
 page inside (about 4 MB): copy it to a USB stick and double-click it (schematic map only).
 
 ## Run it locally
@@ -65,15 +70,15 @@ npm run dev            # http://localhost:5173 (no service worker in dev)
 Production build and a local copy of the GitHub Pages setup:
 
 ```bash
-npm run build          # dist/ (site + sw.js) and srr-offline.html
-npm run serve          # http://localhost:4180/congo-river-basin-SRR/
+npm run build          # dist/ (site + sw.js) and sdr-offline.html
+npm run serve          # http://localhost:4180/congo-river-basin-SDR/
 node scripts/serve.mjs --port 4181 --kbps 400 --latency 400   # imitate bad Wi-Fi
 node scripts/serve.mjs --port 4182 --block globemap            # imitate the globe failing to load
 ```
 
 Stop the server to imitate "network gone". Use a new port for a clean test: each port is its own origin with its own
 offline cache. Opening `dist/index.html` from disk does not work (browsers block ES modules over `file://`); use
-`srr-offline.html` for that. Pushing to `main` deploys to GitHub Pages (`.github/workflows/deploy.yml`).
+`sdr-offline.html` for that. Pushing to `main` deploys to GitHub Pages (`.github/workflows/deploy.yml`).
 
 ## Rerun the analysis pipeline
 
@@ -124,7 +129,7 @@ spot of the chosen year. Commit both `analysis/data` and `src/s3/v2/data`, and u
     deploy shows up on the next reload. A new build (or a change to the worker itself) gets a new cache and the
     old one is deleted;
   - `sw.js` is never cached: the page fetches it to tell whether the server is reachable at all;
-  - only the site itself is answered with the cached page, so `srr-offline.html` loads as itself.
+  - only the site itself is answered with the cached page, so `sdr-offline.html` loads as itself.
 - **Badge** (top bar): *Loading…* → *Preload for offline* (page cached, globe not yet) → *Ready offline* (everything).
 - **Partly cached globe.** If the connection drops while the globe is being saved and the server can't be reached,
   the scenario starts on the schematic map and says "Offline and the globe is not cached" instead of showing an

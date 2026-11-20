@@ -1,11 +1,11 @@
-// Service worker for the S-3 SRR page (generated into dist/sw.js by scripts/sw-plugin.mjs; edit this template).
+// Service worker for the S-3 SDR page (generated into dist/sw.js by scripts/sw-plugin.mjs; edit this template).
 // Install caches the core page so a second visit works offline; the globe files are cached once the globe
 // has loaded, or when the page asks ("Preload for offline"). Same-origin files are served cache-first;
 // the page itself is served from cache and refreshed in the background. Other origins pass straight through.
 const VERSION = '__VERSION__';
 const CORE = __CORE__;
 const GLOBE = __GLOBE__;
-const CACHE = `srr-${VERSION}`;
+const CACHE = `sdr-${VERSION}`; // not srr-: the SRR site shares this origin and purges its own srr-* caches
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
@@ -13,7 +13,7 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil((async () => {
-    for (const k of await caches.keys()) if (k.startsWith('srr-') && k !== CACHE) await caches.delete(k);
+    for (const k of await caches.keys()) if (k.startsWith('sdr-') && k !== CACHE) await caches.delete(k);
     // Earlier workers cached the page's reachability probe (sw.js?probe=...); drop any copy so the probe works offline.
     const cache = await caches.open(CACHE);
     for (const r of await cache.keys()) if (new URL(r.url).pathname.endsWith('/sw.js')) await cache.delete(r);
@@ -28,7 +28,7 @@ self.addEventListener('fetch', e => {
   // Never from the cache: the page fetches sw.js to find out whether the server is reachable at all.
   if (url.pathname.endsWith('/sw.js')) return;
   if (req.mode === 'navigate') {
-    // The cached page answers for the site itself; other pages (srr-offline.html) load as themselves.
+    // The cached page answers for the site itself; other pages (sdr-offline.html) load as themselves.
     const p = url.pathname, isPage = p === new URL(self.registration.scope).pathname || p.endsWith('/index.html');
     e.respondWith(isPage ? page(req, e) : networkFirst(req));
     return;

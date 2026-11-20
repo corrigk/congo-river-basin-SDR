@@ -1,6 +1,6 @@
 // Test server for the production build: serves dist/ under a GitHub Pages-style subpath, gzipped,
 // optionally throttled to imitate bad Wi-Fi. Stop it to imitate "network gone".
-//   node scripts/serve.mjs [--port 4180] [--base /congo-river-basin-SRR/] [--kbps 400] [--latency 400] [--block globemap]
+//   node scripts/serve.mjs [--port 4180] [--base /congo-river-basin-SDR/] [--kbps 400] [--latency 400] [--block globemap]
 // --block makes matching paths fail, e.g. to test that a missing globe falls back to the schematic map.
 import http from 'node:http';
 import fs from 'node:fs';
@@ -8,7 +8,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
-const PORT = +arg('port', 4180), BASE = arg('base', '/congo-river-basin-SRR/');
+const PORT = +arg('port', 4180), BASE = arg('base', '/congo-river-basin-SDR/');
 const KBPS = +arg('kbps', 0), LATENCY = +arg('latency', 0), BLOCK = arg('block', '');
 const ROOT = path.resolve('dist');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.woff2': 'font/woff2',

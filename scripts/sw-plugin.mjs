@@ -11,7 +11,7 @@ const walk = dir => fs.readdirSync(dir, { withFileTypes: true })
 export function serviceWorker() {
   let outDir = 'dist';
   return {
-    name: 'srr-service-worker',
+    name: 'sdr-service-worker',
     apply: 'build',
     configResolved(c) { outDir = c.build.outDir; },
     closeBundle() {

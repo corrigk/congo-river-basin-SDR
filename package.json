@@ -1,5 +1,5 @@
 {
-  "name": "congo-srr-s3",
+  "name": "congo-sdr-s3",
   "version": "1.0.0",
   "description": "RFP S-3 BASINLINK & BASINCAST: System Requirements Review demo page",
   "main": "index.js",

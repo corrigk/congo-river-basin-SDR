@@ -14,7 +14,7 @@ Second session: link budgets (sensor uplink with canopy foliage, station relay, 
 station power sizing now drive capacity, canopy timing, relay reach, S3-10 and station cost (Links & power tab).
 Third session: presenting mode (seven-slide deck from the live design, keys, deep links, PNG/SVG chart export,
 Markdown summary).
-Not yet: satellite power and mass budgets, spares and reliability models; vendor quotes; the optimizer does not run in `srr-offline.html`
+Not yet: satellite power and mass budgets, spares and reliability models; vendor quotes; the optimizer does not run in `sdr-offline.html`
 (the worker is a separate file).
 
 ## What it is
