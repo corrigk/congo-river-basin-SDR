@@ -7,6 +7,8 @@
 //   stations-<year>.json the four coverage modes' station order, curve and first-covered map for one year
 //   hazards.json         conflict, fire and flood layers for the ConOps "why" map
 //   today.json           towns with a modeled terrestrial-reach radius, for the ConOps "today" step
+//   coverage.json        village speakers and receivers per cell, and the ranger stations derived from them
+//                        (site_speakers.py, stations_from_speakers.py), for the Design tab's speakers and stations steps
 // Run after rerunning the pipeline:  npm run data:page
 import fs from 'node:fs';
 
@@ -64,11 +66,27 @@ write('today.json', {
 // ConOps "why" layers: conflict, fire and flood on the same grid (analysis/scripts/build_hazards.py).
 if (fs.existsSync(new URL('hazards.json', SRC))) write('hazards.json', read('hazards.json'));
 
+// Village speakers and the stations that look after them (modeled proxy until GRID3, Stage 3).
+const spk = fs.existsSync(new URL('speakers.json', SRC)) ? read('speakers.json') : null;
+const sts = fs.existsSync(new URL('stations_speaker.json', SRC)) ? read('stations_speaker.json') : null;
+if (spk && sts) {
+  write('coverage.json', {
+    _note: spk._note, year: spk.year, radius_m: spk.radius_m, cutoff_people: spk.cutoff_people, people_per_receiver: spk.people_per_receiver,
+    hazard_weights: spk.hazard_weights, by_year: spk.by_year, bands: spk.bands, curve: spk.curve, rollout: spk.rollout,
+    cells: { t1: spk.cells.t1, heard: spk.cells.heard, t2: spk.cells.t2.map(v => Math.round(v)), hazard: spk.cells.hazard.map(v => r(v, 2)),
+      urban: spk.cells.urban.map(v => (v > 0 ? 1 : 0)) },
+    stations: { _note: sts._note, T_maint_h: sts.T_maint_h, X: sts.X, x_formula: sts.x_formula, speakers: sts.speakers, assigned: sts.assigned,
+      unassigned: sts.unassigned, sites: sts.sites, compare: sts.compare, sweep: sts.sweep, owner_b64: sts.owner_b64,
+      list: sts.stations.map(s => [r(s.lon, 3), r(s.lat, 3), s.type, s.n_speakers, s.max_travel_h, s.mean_travel_h]) },
+  });
+}
+
 const st = read('stations.json');
 for (const y of pop.years) {
   const runs = {};
-  for (const mode of ['radio', 'response', 'speaker', 'mix']) {
-    const run = st.runs[`${mode}_${y}`];
+  for (const mode of ['radio', 'response', 'speaker', 'mix', 'alerts']) {
+    const run = mode === 'alerts' ? sts?.runs[String(y)] : st.runs[`${mode}_${y}`];
+    if (!run) continue;
     runs[mode] = {
       ...run,
       stations: run.stations.map(s => ({ ...s, lat: r(s.lat, 3), lon: r(s.lon, 3) })),

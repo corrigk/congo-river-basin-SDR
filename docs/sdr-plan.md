@@ -31,6 +31,13 @@ Design tab steps **Who must hear it** and **How far a voice carries** (`docs/cov
 gaps filled (Mbandaka was outside it) and the pipeline rerun; `build_urbanisation.py` for the design population;
 `scripts/coverage-report.mjs`. Next: Stage 3 (settlements from GRID3, speaker siting, terrain profiles), then 2, 4, 5, 6.
 
+## The chain on the map (2026-11-20)
+
+Research → Design is one story on one map: Why → Today → Speakers & receivers → Ranger stations → S-3 network, each
+step keeping the one before it faintly and animating the links in. Speakers come from a modeled proxy
+(`site_speakers.py`, hazard-first rollout), stations from the speakers (`stations_from_speakers.py`), and the network
+step uses those stations. Stage 3 (GRID3) replaces the proxy with no page change.
+
 ## What it is
 
 The SRR page, turned into a **decision workbench** for the System Definition Review: an interactive page that monitors

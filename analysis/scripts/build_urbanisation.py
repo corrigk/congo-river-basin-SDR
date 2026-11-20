@@ -27,21 +27,24 @@ RAW = os.path.join(HERE, "..", "raw", "worldpop")
 FOUR = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
 
 
-def main():
+def load_worldpop():
+    """WorldPop 2020 1 km inside the basin: people per pixel, the raster transform and each pixel's km2."""
     files = sorted(glob.glob(os.path.join(RAW, "*.tif")))
     if not files:
         sys.exit("WorldPop rasters not found in raw/worldpop (see analysis/README.md)")
     basin = json.load(open(os.path.join(DATA, "basin.geojson")))
     geoms = [f["geometry"] for f in basin["features"]]
-    srcs = [rasterio.open(f) for f in files]
-    arr, tr = merge(srcs, nodata=0)
+    arr, tr = merge([rasterio.open(f) for f in files], nodata=0)
     a = np.where(arr[0] > 0, arr[0], 0).astype(np.float64)
     a[geometry_mask(geoms, out_shape=a.shape, transform=tr)] = 0
     lat = tr.f + (np.arange(a.shape[0]) + 0.5) * tr.e
     km2 = (abs(tr.e) * 110.57) * (abs(tr.a) * 111.32 * np.cos(np.radians(lat)))[:, None] * np.ones((1, a.shape[1]))
-    dens = np.divide(a, km2, out=np.zeros_like(a), where=km2 > 0)
-    tot = a.sum()
+    return a, tr, km2
 
+
+def classify(a, km2):
+    """Masks (urban centre, town or peri-urban cluster) and the centres' labels and populations."""
+    dens = np.divide(a, km2, out=np.zeros_like(a), where=km2 > 0)
     lab, n = ndimage.label(dens >= 1500, structure=FOUR)
     cp = ndimage.sum(a, lab, index=np.arange(1, n + 1))
     centre_ids = np.nonzero(cp >= 50_000)[0] + 1
@@ -49,6 +52,13 @@ def main():
     labu, nu = ndimage.label(dens >= 300, structure=FOUR)
     up = ndimage.sum(a, labu, index=np.arange(1, nu + 1))
     cluster = np.isin(labu, np.nonzero(up >= 5_000)[0] + 1) & ~centre
+    return centre, cluster, lab, centre_ids, cp
+
+
+def main():
+    a, tr, km2 = load_worldpop()
+    tot = a.sum()
+    centre, cluster, lab, centre_ids, cp = classify(a, km2)
     rural = ~centre & ~cluster
     share = {"urban_centre": a[centre].sum() / tot, "town_periurban": a[cluster].sum() / tot, "rural": a[rural].sum() / tot}
 

@@ -1,8 +1,9 @@
-// ConOps tab: one map in three steps. "Why" shows what S-3 is up against (people, conflict, fire, floods, protected
-// areas, existing infrastructure); "Today" shows what the basin has without S-3 (a modeled proxy for existing
-// networks, plus the RFP's figures); "With S-3" fades those out and the design in, with sliders and
+// The basin map, five steps of one story across the Research and Design tabs. "Why" shows what S-3 is up against
+// (people, conflict, fire, floods, protected areas, existing infrastructure); "Today" what the basin has without S-3;
+// "Speakers & receivers" where the alerts are heard, placed where people and hazards meet; "Ranger stations" the
+// stations derived from those speakers; "S-3 network" the stations wired to satellites and hubs, with sliders and
 // toggles that drive the requirement checks, the cost range and the coverage curve (model.js).
-import { D, YEARS, MODES, geo as loadGeo, grid as loadGrid, pop as loadPop, stations as loadStations, hazards as loadHz, today as loadToday, firstCovered } from '../v2/data.js';
+import { D, YEARS, MODES, geo as loadGeo, grid as loadGrid, pop as loadPop, stations as loadStations, hazards as loadHz, today as loadToday, coverage as loadCov, firstCovered } from '../v2/data.js';
 import { el, seg, tag, fmt, fmtM, sv, svText, chartBlock, showTip, hideTip, kv } from '../v2/ui.js';
 import { evaluate, sweetSpot, LEO_SIZES, ASSUME, TODAY, todayReach, compareToday } from './model.js';
 import { createConopsMap, FAMILY, familyOf } from './map.js';
@@ -13,14 +14,16 @@ import './conops.css';
 
 const BEST = k => (k === 1 ? [D.db.recommended[0]] : D.db.best_by_count[String(k)].nodes);
 const DESIGN = () => ({
-  year: 2041, mode: 'mix', n: null, repeaters: 0, nodes: BEST(4), leoSats: 24, geo: true, starlink: true, hydro: false, raised: true, fail: null,
+  year: 2041, mode: 'alerts', n: null, repeaters: 0, nodes: BEST(4), leoSats: 24, geo: true, starlink: true, hydro: false, raised: true, fail: null,
   sensors: Object.fromEntries(D.sn.types.map(t => [t.id, t.baseline_count])),
 });
 export const S = {
   step: 'why', ...DESIGN(), resTab: 'overview', sweep: 'leoSats',
   today: { reached: true, unreached: true, rings: true, infra: true },
+  alerts: { hazard: true, receivers: true, urban: true, speakers: true },
+  stationsShow: { links: true, srr: true },
   why: { pop: true, infra: true, conflict: true, fire: true, flood: true, pa: true },
-  show: { coverage: true, reach: true, geo: true, water: true, forest: true, fire: true, flowUp: false, flowAlert: false, flowTwo: false, hud: true },
+  show: { coverage: true, reach: true, geo: true, water: true, forest: true, fire: true, flowUp: false, flowAlert: true, flowTwo: true, hud: true },
 };
 
 const CHECK_NAMES = {
@@ -35,23 +38,36 @@ const CHECK_FULL = {
 const FAILS = [[null, 'None'], ['hub', 'Hub down'], ['leo', 'LEO plane lost'], ['geo', 'GEO lost'], ['grid', 'Grid and cell down'], ['station', 'Station flooded']];
 const LINE_COL = { leo: '--s1', geo: '--s7', stations: '--s4', repeaters: '--data', antennas: '--s3', db: '--accent', receivers: '--s5', backhaul: '--s2' };
 
-let root = null, map = null, hud = null, hudToday = null, G = null, R = null, base = null, spot = null, nodeStats = null, raf = 0, timer = 0;
+let root = null, map = null, hud = null, hudToday = null, hudAlerts = null, hudStations = null, G = null, R = null, base = null, spot = null, nodeStats = null, raf = 0, timer = 0;
 const $ = s => root.querySelector(s);
 
 // ---------- data for the current year ----------
 async function loadYear() {
-  const [geo, grid, pop, st, hz, today] = await Promise.all([loadGeo(), loadGrid(), loadPop(S.year), loadStations(S.year), loadHz(), loadToday()]);
+  const [geo, grid, pop, st, hz, today, cov] = await Promise.all([loadGeo(), loadGrid(), loadPop(S.year), loadStations(S.year), loadHz(), loadToday(), loadCov()]);
   if (!(G && G.grid === grid)) {
     const cellLL = grid.i.map(i => [grid.lon0 + (i % grid.nx) * grid.res_deg, grid.lat0 + Math.floor(i / grid.nx) * grid.res_deg]);
-    G = { geo, grid, first: firstCovered, cellLL, cellIdx: new Map(grid.i.map((g, k) => [g, k])), today, todayReach: todayReach(grid, cellLL, today.towns) };
+    G = { geo, grid, first: firstCovered, cellLL, cellIdx: new Map(grid.i.map((g, k) => [g, k])), today, todayReach: todayReach(grid, cellLL, today.towns), cov: prepCov(cov) };
   }
   G = { ...G, pop, st, hz };
+  G.cov.srr = st.runs.mix.stations.slice(0, sweetSpot(st.runs.mix).knee); // the SRR stations, for comparison
   G.todayNow = G.todayReach.share(pop); // today's reach for this year's population
   spot = sweetSpot(st.runs[S.mode]);
   if (S.n == null) S.n = spot.knee;
   base = evaluate(D, st, { ...DESIGN(), n: spot.knee, year: S.year, mode: S.mode, dbNodes: BEST(4) });
 }
 const opts = () => ({ ...S, dbNodes: S.nodes });
+
+// Speakers and the stations derived from them (coverage.json): rollout order (people heard x (1 + hazard), so the
+// crowded, high-hazard places come first), each cell's station, and which cells are urban centres.
+function prepCov(cov) {
+  const C = cov.cells, order = [];
+  for (let k = 0; k < C.t1.length; k++) if (C.t1[k] > 0) order.push(k);
+  order.sort((a, b) => (C.heard[b] / C.t1[b]) * (1 + C.hazard[b]) - (C.heard[a] / C.t1[a]) * (1 + C.hazard[a]));
+  const b = atob(cov.stations.owner_b64), u = new Uint8Array(b.length);
+  for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
+  const urbanCells = new Set(); C.urban.forEach((v, k) => v && urbanCells.add(k));
+  return { ...cov, order, owner: new Uint16Array(u.buffer), urbanCells };
+}
 
 // Average distance from a resident to the nearest database node, and the share within 500 km (population-weighted).
 function nodeDistances() {
@@ -78,35 +94,42 @@ export async function mount(el_, step = 'why') {
     <div class="co" data-step="${S.step}">
       <header class="co-head">
         <div><div class="pv-eyebrow"><span class="co-e-research">Research · where things happen and what exists</span><span class="co-e-design">Design · RFP S-3</span></div>
-          <h2 class="co-title"><span class="co-t-why">Why the basin needs S-3</span><span class="co-t-today">Today, without S-3</span><span class="co-t-what">What we build, where, and how many</span></h2></div>
+          <h2 class="co-title"><span class="co-t-why">Why the basin needs S-3</span><span class="co-t-today">Today, without S-3</span><span class="co-t-alerts">Where the alerts are heard</span><span class="co-t-stations">Who looks after the speakers</span><span class="co-t-what">The S-3 network</span></h2></div>
         <div class="co-stepbar">${stepBar(S.step)}</div>
       </header>
       <div class="co-body">
         <div class="co-mapcol"><div class="co-map"><div class="v2-loading">Loading the basin…</div></div><div class="co-legend"></div></div>
-        <div class="co-col co-side"><div class="co-pane is-why"></div><div class="co-pane is-today"></div><div class="co-pane is-what"></div></div>
-        <div class="co-col co-res"><div class="co-pane is-why"></div><div class="co-pane is-today"></div><div class="co-pane is-what"></div></div>
+        <div class="co-col co-side"><div class="co-pane is-why"></div><div class="co-pane is-today"></div><div class="co-pane is-alerts"></div><div class="co-pane is-stations"></div><div class="co-pane is-what"></div></div>
+        <div class="co-col co-res"><div class="co-pane is-why"></div><div class="co-pane is-today"></div><div class="co-pane is-alerts"></div><div class="co-pane is-stations"></div><div class="co-pane is-what"></div></div>
       </div>
     </div>`;
   await loadYear();
   map = createConopsMap($('.co-map'), { onNode: toggleNode });
   hud = el('div', { class: 'co-hud', role: 'status', 'aria-label': 'Design numbers' });
   hudToday = el('div', { class: 'co-hud co-hud-today', role: 'status', 'aria-label': 'What the basin has today' });
-  map.wrap.append(hudToday, hud);
+  hudAlerts = el('div', { class: 'co-hud co-hud-alerts', role: 'status', 'aria-label': 'Speakers and receivers' });
+  hudStations = el('div', { class: 'co-hud co-hud-stations', role: 'status', 'aria-label': 'Ranger stations derived from the speakers' });
+  map.wrap.append(hudToday, hudAlerts, hudStations, hud);
   nodeStats = nodeDistances();
   R = evaluate(D, G.st, opts());
   map.draw(G, S, R);
   buildWhy();
   buildToday();
+  buildAlerts();
+  buildStations();
   buildWhat();
   renderLegend();
   renderResults();
   renderHud();
   renderToday();
+  if (['alerts', 'stations'].includes(S.step)) map.play(S.step);
 }
 
 export function setStep(step) {
-  if (!root || !['why', 'today', 'what'].includes(step)) return;
+  if (!root || !['why', 'today', 'alerts', 'stations', 'what'].includes(step)) return;
+  const was = S.step;
   S.step = step;
+  if (step !== was && ['alerts', 'stations', 'what'].includes(step)) map?.play(step);
   $('.co').dataset.step = step;
   $('.co-stepbar').innerHTML = stepBar(step);
   renderLegend();
@@ -165,7 +188,7 @@ function buildWhy() {
       cb.addEventListener('change', () => { S.why[k] = cb.checked; map.drawWhy(S); });
       return el('label', { class: 'co-layer' }, cb, el('i', { style: `background:${sw}` }), el('span', { text: label }), el('small', { text: src }));
     })),
-    el('p', { class: 'co-hint' }, 'Press ', el('kbd', { text: '→' }), ' for what S-3 builds.'),
+    el('p', { class: 'co-hint' }, 'Press ', el('kbd', { text: '→' }), ' for what the basin has today.'),
   );
   const people = y => G.grid.summary[String(y)].basin_total;
   const byYear = Object.entries(hz.conflict.by_year);
@@ -210,7 +233,7 @@ function buildWhat() {
 
   ctl.year = el('div', { class: 'co-slot' });
   ctl.mode = el('div', { class: 'co-slot' });
-  ctl.stations = range('Ranger stations', 0, 400, 1, () => S.n, v => { S.n = v; });
+  ctl.stations = range('Ranger stations', 0, G.st.runs[S.mode].stations.length, 1, () => S.n, v => { S.n = v; });
   ctl.spot = el('div', { class: 'co-spot' });
   ctl.curve = el('div', { class: 'co-curve' });
   ctl.repeaters = range('Canopy repeaters', 0, 300, 5, () => S.repeaters, v => { S.repeaters = v; });
@@ -246,11 +269,12 @@ function syncControls() {
   ctl.nodeNote.textContent = `${S.nodes.join(', ')}. Average ${fmt(nodeStats.meanKm)} km to a node; ${fmt(nodeStats.within500)}% of people within 500 km. Click a city on the map to move one.`;
   ctl.leo.replaceChildren(el('span', { class: 'co-sub', text: 'LEO satellites' }), seg(LEO_SIZES.map(n => [n, String(n)]), S.leoSats, v => { S.leoSats = v; update(); }, 'LEO satellites'));
   ctl.fail.replaceChildren(seg(FAILS, S.fail, v => { S.fail = v; update(); }, 'Failure case'));
+  ctl.stations.inp.max = G.st.runs[S.mode].stations.length;
   ctl.stations.sync(); ctl.repeaters.sync(); ctl.sensors.forEach(s => s.sync());
   ctl.sensorSum.textContent = `${fmt(R.terminals)} terminals`;
   ctl.curve.replaceChildren(curveChart());
   // Sweet-spot band painted under the station slider.
-  const pct = v => `${(v / 400) * 100}%`;
+  const pct = v => `${(v / G.st.runs[S.mode].stations.length) * 100}%`;
   ctl.spot.replaceChildren(
     el('div', { class: 'co-band', 'aria-hidden': 'true' }, el('i', { style: `left:${pct(spot.lo)};width:calc(${pct(spot.hi)} - ${pct(spot.lo)})` }), el('b', { style: `left:${pct(spot.knee)}` })),
     el('p', { class: 'co-note' }, `Sweet spot ${spot.knee} · range ${spot.lo}–${spot.hi} · `, el('button', { class: 'v2-link', text: 'use it', onclick: () => { S.n = spot.knee; update(); } })),
@@ -261,6 +285,120 @@ function resetDesign() {
   const keepYear = S.year;
   Object.assign(S, DESIGN(), { year: keepYear, n: null });
   update({ data: true });
+}
+
+// ---------- speakers & receivers: where the alerts are heard ----------
+const cell = (big, label, over) => el('div', { class: `co-hud-c${over ? ' is-over' : ''}` }, el('b', { text: big }), el('span', { text: label }));
+const k = v => (v >= 1e6 ? `${fmt(v / 1e6, 1)}M` : v >= 1e4 ? `${fmt(v / 1e3)}k` : fmt(v));
+function buildAlerts() {
+  const cv = G.cov, y = cv.by_year[cv.year], b = cv.bands;
+  const L = S.alerts, layers = [['speakers', 'Village speakers (T1)', 'var(--gold)'], ['receivers', 'Community receivers (T2)', 'var(--river)'], ['urban', 'Urban centres: phones and radio (T3)', 'transparent'], ['hazard', 'Hazard score (from the Why map)', 'var(--rust-hi)']];
+  $('.co-side .is-alerts').replaceChildren(
+    el('h3', { class: 'co-h', text: 'On the map' }),
+    el('div', { class: 'co-layers' }, layers.map(([key, label, sw]) => {
+      const cb = el('input', { type: 'checkbox' }); cb.checked = L[key];
+      cb.addEventListener('change', () => { L[key] = cb.checked; map.drawAlerts(S); });
+      return el('label', { class: 'co-layer' }, cb, el('i', { style: `background:${sw};${key === 'urban' ? 'border:1.5px solid var(--s2)' : ''}` }), el('span', { text: label }), el('small', { text: 'proxy' }));
+    })),
+    el('h3', { class: 'co-h', text: 'How they are placed' }),
+    el('p', { class: 'co-note' }, `A village speaker goes wherever its voice would reach at least ${cv.cutoff_people.base} people (it carries about ${cv.radius_m.base} m at night out of a village into forest). Smaller villages get a $25 receiver, one per ${cv.people_per_receiver} people. Urban centres rely on phones and radio first.`),
+    el('p', { class: 'co-note' }, el('b', { text: 'Informed by the Why map: ' }), `speakers roll out first where people and hazards meet (people heard × (1 + hazard score: conflict, fire and floods, equal weights)). The first tenth of the rollout sits at ${fmt((cv.rollout.first_tenth_mean_hazard / cv.rollout.all_mean_hazard) * 100 - 100)}% higher hazard than the average speaker.`),
+    el('div', { class: 'co-explain' },
+      el('button', { class: 'v2-link', 'data-co-step': 'hear', text: 'Who must hear it? →' }),
+      el('button', { class: 'v2-link', 'data-co-step': 'sound', text: 'How far a voice carries →' })),
+    el('p', { class: 'co-note' }, tag('Modeled proxy', 'proxy'), ' People are spread evenly within each 1 km cell of WorldPop. Settlement outlines (GRID3, Stage 3) replace this: they will merge many of these speakers into one per village.'),
+    el('p', { class: 'co-hint' }, 'Press ', el('kbd', { text: '→' }), ' for the ranger stations these speakers need.'),
+  );
+  hudAlerts.replaceChildren(
+    cell(k(y.t1), 'village speakers'), cell(`${fmt(y.t1_heard_pct)}%`, 'of rural + peri-urban people within a speaker\'s voice'),
+    cell(k(y.t2), 'community receivers'), cell(k(y.t1 + y.t2), 'S3-05 receivers in all'), cell(k(y.urban_pop), 'people in urban centres: phones first'));
+  const W = 320, H = 150, m = { l: 34, r: 10, t: 10, b: 24 }, c = cv.curve, xMax = c.n[c.n.length - 1], yMax = 100;
+  const X = v => m.l + (Math.log10(Math.max(v, 100)) - 2) / (Math.log10(xMax) - 2) * (W - m.l - m.r), Y = v => H - m.b - (v / yMax) * (H - m.t - m.b);
+  const s = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'vsvg', role: 'img', 'aria-label': 'People who can hear a village speaker against the number of speakers, in rollout order' });
+  for (const v of [0, 50, 95]) { sv('line', { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), class: v === 95 ? 'sd-cap' : 'gl' }, s); svText(s, { x: m.l - 4, y: Y(v) + 3, 'text-anchor': 'end', class: 'axl' }, `${v}%`); }
+  svText(s, { x: W - m.r, y: Y(95) - 4, 'text-anchor': 'end', class: 'sub' }, '95% reference');
+  for (const v of [100, 1000, 10000, 100000].filter(v => v <= xMax)) svText(s, { x: X(v), y: H - 8, 'text-anchor': 'middle', class: 'axl' }, k(v));
+  sv('path', { d: `M${c.n.map((n, i) => `${X(n).toFixed(1)},${Y(c.pct[i]).toFixed(1)}`).join('L')}`, fill: 'none', stroke: 'var(--gold)', 'stroke-width': 2.5 }, s);
+  $('.co-res .is-alerts').replaceChildren(
+    el('div', { class: 'co-headline' }, el('b', { text: `${k(y.t1)} speakers` }),
+      el('span', { text: `reach ${fmt(y.t1_heard / 1e6, 1)}M people (${fmt(y.t1_heard_pct)}% of the rural and peri-urban ${fmt(y.design_pop / 1e6, 1)}M); ${k(y.t2)} receivers cover ${fmt(y.t2_pop / 1e6, 1)}M more in smaller villages. Range ${k(b.high.t1)}–${k(b.low.t1)} speakers across the acoustic assumptions.` })),
+    chartBlock('co-spk-curve', 'People within a speaker\'s voice, in rollout order', s, [['Speakers', '% of rural + peri-urban people'], ...c.n.filter((_, i) => i % 4 === 0).map((n, i) => [fmt(n), `${fmt(c.pct[i * 4], 1)}%`])]),
+    chartBlock('co-spk-bands', 'Speakers needed across the range', el('table', { class: 'vtable' },
+      el('thead', {}, el('tr', {}, ['Case', 'Voice reaches', 'Smallest group', 'Speakers', 'People within'].map(h => el('th', { text: h })))),
+      el('tbody', {}, ['high', 'base', 'low'].map(n => el('tr', {}, el('th', { scope: 'row', text: n === 'high' ? 'Far (loud, little forest loss)' : n === 'low' ? 'Near (quiet, dense forest)' : 'Base' }),
+        el('td', { text: `${b[n].radius_m} m` }), el('td', { text: `${b[n].cutoff} people` }), el('td', { text: k(b[n].t1) }), el('td', { text: `${fmt(b[n].t1_heard_pct)}%` }))))),
+    [['Case', 'Radius m', 'Cutoff', 'Speakers', 'Heard %'], ...['high', 'base', 'low'].map(n => [n, String(b[n].radius_m), String(b[n].cutoff), String(b[n].t1), String(b[n].t1_heard_pct)])]),
+    el('p', { class: 'co-note' }, 'S3-05 counts receivers: every village speaker carries the same GEO receiver as the $25 community receiver, so both count. The people share is information, with 95% as a reference line.'),
+  );
+}
+
+// ---------- ranger stations: derived from the speakers ----------
+function buildStations() {
+  const st = G.cov.stations, f = st.x_formula;
+  const calc = { crews: f.crews_per_station, hours: f.crew_hours_yr, visits: f.visits_per_speaker_yr, perVisit: f.hours_per_visit, t: String(st.T_maint_h) };
+  const side = $('.co-side .is-stations'), res = $('.co-res .is-stations');
+  const L = S.stationsShow;
+  const tog = (key, label, sw) => { const cb = el('input', { type: 'checkbox' }); cb.checked = L[key]; cb.addEventListener('change', () => { L[key] = cb.checked; map.drawStations(S); }); return el('label', { class: 'co-layer' }, cb, el('i', { style: sw }), el('span', { text: label })); };
+  const out = el('div');
+  const draw = () => {
+    const X = Math.floor((calc.crews * calc.hours) / (calc.visits * calc.perVisit));
+    const rows = st.sweep[calc.t];
+    // stations needed at this X: interpolate the precomputed X x T_maint table on log X
+    let n = rows[0].stations;
+    for (let i = 1; i < rows.length; i++) if (X <= rows[i].X) { const a = rows[i - 1], b = rows[i], t = (Math.log(X) - Math.log(a.X)) / (Math.log(b.X) - Math.log(a.X)); n = Math.round(a.stations + t * (b.stations - a.stations)); break; } else n = rows[i].stations;
+    out.replaceChildren(
+      el('div', { class: 'co-headline' }, el('b', { text: `X = ${fmt(X)} → ${fmt(n)} stations` }),
+        el('span', { text: `each looking after up to ${fmt(X)} speakers within ${calc.t} h (${fmt(rows[rows.length - 1].unassigned)} speakers have no possible site that close)` })),
+      stationCurve(X, calc.t));
+  };
+  const tSel = el('div', { class: 'co-slot' });
+  const pickT = v => { calc.t = v; tSel.replaceChildren(seg([['4', '4 h'], ['8', '8 h'], ['24', '24 h']], calc.t, w => { pickT(w); draw(); }, 'Longest trip')); };
+  pickT(calc.t);
+  const slider = (label, key, min, max, step, unit) => {
+    const o = el('b', { text: `${calc[key]} ${unit}` });
+    return el('div', { class: 'co-calc' }, el('span', { text: label }), o, el('input', { type: 'range', min, max, step, value: calc[key], 'aria-label': label, oninput: e => { calc[key] = +e.target.value; o.textContent = `${calc[key]} ${unit}`; draw(); } }));
+  };
+  side.replaceChildren(
+    el('h3', { class: 'co-h', text: 'On the map' }),
+    el('div', { class: 'co-layers' }, tog('links', 'Each speaker area wired to its station', 'background:var(--text);height:2px'), tog('srr', `The SRR's ${st.compare.srr_sweet_spot} stations (outline)`, 'border:1.5px solid var(--muted)')),
+    el('h3', { class: 'co-h', text: 'How the stations are derived' }),
+    el('p', { class: 'co-note' }, `Rangers keep the village speakers (team decision). A station's crews can look after up to X speakers within an ${st.T_maint_h}-hour trip by boat, road or foot (the SRR travel model). Stations open where they can take the most unassigned speakers, until every reachable speaker has one.`),
+    el('h3', { class: 'co-h', text: 'Crew-hours calculator' }),
+    el('p', { class: 'co-note', text: 'X = crews × hours a year ÷ (visits a year × hours a visit)' }),
+    slider('Crews per station', 'crews', 1, 4, 1, ''), slider('Hours per crew a year', 'hours', 1000, 2200, 100, 'h'),
+    slider('Visits per speaker a year', 'visits', 1, 6, 1, ''), slider('Hours a visit, travel included', 'perVisit', 2, 16, 1, 'h'),
+    el('div', { class: 'co-calc' }, el('span', { text: 'Longest trip' }), tSel),
+    el('p', { class: 'co-note' }, tag('Assumption', 'assume'), ' Crew numbers and visit hours are TBR. The map shows X = ', el('b', { text: String(st.X) }), ` and ${st.T_maint_h} h.`),
+    el('p', { class: 'co-hint' }, 'Press ', el('kbd', { text: '→' }), ' to wire these stations to the satellites and hubs.'),
+  );
+  const run = G.st.runs.alerts.stations, last = run[run.length - 1];
+  hudStations.replaceChildren(
+    cell(fmt(st.list.length), `stations (${fmt(st.sites)} sites)`), cell(fmt(st.X), `speakers each, at most · ${st.T_maint_h} h trips`),
+    cell(fmt(st.compare.srr_sweet_spot), 'SRR stations, for comparison'), cell(k(st.unassigned), 'speakers beyond 8 h', st.unassigned > 0),
+    cell(`$${fmt(last.cum_cost_musd)}M`, 'stations, 15 years', last.cum_cost_musd > 400));
+  res.replaceChildren(out,
+    el('div', { class: 'co-chain' }, el('b', { text: 'Speakers' }), el('i', { text: '→' }), el('b', { text: `${fmt(st.list.length)} stations` }), el('i', { text: '→' }), el('span', { text: `S-3 network: these stations are the "Speakers" mode of the station slider there, so their cost and coverage flow into the requirement checks.` })),
+    el('p', { class: 'co-note' }, `These ${fmt(st.list.length)} stations cost $${fmt(last.cum_cost_musd)}M over 15 years on their own, more than the whole $400M cap, and reach ${fmt(last.cum_pct, 1)}% of people by radio or a 1-hour response. Fewer speakers (settlement outlines in Stage 3), more speakers per crew, or communities keeping the smaller speakers bring it down: the curve shows how fast.`));
+  draw();
+}
+function stationCurve(Xnow, tSel) {
+  const sw = G.cov.stations.sweep, W = 320, H = 170, m = { l: 40, r: 10, t: 10, b: 26 };
+  const xs = sw[tSel].map(r => r.X), yMax = Math.max(...Object.values(sw).flat().map(r => r.stations));
+  const X = v => m.l + (Math.log(v) - Math.log(xs[0])) / (Math.log(xs[xs.length - 1]) - Math.log(xs[0])) * (W - m.l - m.r), Y = v => H - m.b - (v / yMax) * (H - m.t - m.b);
+  const s = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'vsvg', role: 'img', 'aria-label': 'Stations needed against speakers per station, for three longest trips' });
+  for (const v of [0, yMax / 2, yMax]) { sv('line', { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), class: 'gl' }, s); svText(s, { x: m.l - 4, y: Y(v) + 3, 'text-anchor': 'end', class: 'axl' }, fmt(v)); }
+  for (const v of xs.filter((_, i) => i % 2 === 0)) svText(s, { x: X(v), y: H - 10, 'text-anchor': 'middle', class: 'axl' }, fmt(v));
+  svText(s, { x: (m.l + W) / 2, y: H - 0, 'text-anchor': 'middle', class: 'sub' }, 'speakers per station (X, log scale)');
+  const col = { 4: '--s2', 8: '--gold', 24: '--river' };
+  for (const [t, rows] of Object.entries(sw)) {
+    sv('path', { d: `M${rows.map(r => `${X(r.X).toFixed(1)},${Y(r.stations).toFixed(1)}`).join('L')}`, fill: 'none', stroke: `var(${col[t]})`, 'stroke-width': t === tSel ? 3 : 1.5, opacity: t === tSel ? 1 : 0.6 }, s);
+    const lr = rows[rows.length - 1]; svText(s, { x: X(lr.X) - 2, y: Y(lr.stations) - 5, 'text-anchor': 'end', class: 'sub' }, `${t} h`);
+  }
+  if (Xnow >= xs[0] && Xnow <= xs[xs.length - 1]) sv('line', { x1: X(Xnow), x2: X(Xnow), y1: m.t, y2: H - m.b, class: 'cursor' }, s);
+  sv('line', { x1: m.l, x2: W - m.r, y1: Y(G.cov.stations.compare.srr_sweet_spot), y2: Y(G.cov.stations.compare.srr_sweet_spot), class: 'sd-cap' }, s);
+  svText(s, { x: W - m.r, y: Y(G.cov.stations.compare.srr_sweet_spot) - 4, 'text-anchor': 'end', class: 'sub' }, `SRR ${G.cov.stations.compare.srr_sweet_spot}`);
+  return chartBlock('co-x-curve', 'Stations needed: speakers per station × longest trip', s,
+    [['X', ...Object.keys(sw).map(t => `${t} h`)], ...xs.map((x, i) => [String(x), ...Object.values(sw).map(rows => fmt(rows[i].stations))])]);
 }
 
 // ---------- today: what the basin has without S-3, and by how much the design improves it ----------
@@ -276,7 +414,7 @@ function buildToday() {
     })),
     el('p', { class: 'co-note' }, tag('Modeled proxy'), ` Existing networks are drawn around the ${G.today.towns.length} towns and cities we hold: 40 km for 1M+ people, 25 km for 250k+, 15 km for 50k+, 8 km for smaller. It is not measured coverage. It agrees with the RFP's figure that the internet reaches 27–32% of people. Real tower data (for example OpenCelliD) would replace it.`),
     el('p', { class: 'co-note' }, 'The "With S-3" numbers use the design you set on the next step.'),
-    el('p', { class: 'co-hint' }, 'Press ', el('kbd', { text: '→' }), ' to see what S-3 builds.'),
+    el('p', { class: 'co-hint' }, 'Press ', el('kbd', { text: '→' }), ' for where the alerts will be heard.'),
   );
 }
 
@@ -324,6 +462,14 @@ function renderLegend() {
       item('background:linear-gradient(90deg,var(--seq-1),var(--seq-6))', 'People per km²'), item('background:var(--critical);border-radius:50%;opacity:.7', 'Conflict (size = deaths)'),
       item('background:var(--s2);border-radius:50%', 'Fire'), item('background:var(--river);border-radius:50%', 'Flood alert'),
       item('border:1px dashed var(--s6)', 'Protected area'), item('background:var(--text)', 'Infrastructure')));
+    return;
+  }
+  if (S.step === 'alerts' || S.step === 'stations') {
+    const item = (sw, text) => el('span', { class: 'co-lg is-fixed' }, el('i', { class: 'co-sw', style: sw }), text);
+    $('.co-legend').replaceChildren(el('div', { class: 'co-lgroup' }, el('b', { text: S.step === 'alerts' ? 'Alerts (modeled proxy)' : 'Stations from speakers' }),
+      ...(S.step === 'alerts'
+        ? [item('background:linear-gradient(90deg,color-mix(in srgb,var(--gold) 25%,transparent),var(--gold))', 'Village speakers per area'), item('background:var(--river);border-radius:50%;opacity:.6', 'Receivers'), item('border:1.5px solid var(--s2)', 'Urban centre'), item('background:var(--rust-hi);opacity:.4', 'Hazard score')]
+        : [item('background:var(--text)', 'Station (shape = access)'), item('background:var(--text);height:2px', 'Speaker area → its station'), item('border:1.5px solid var(--muted)', 'SRR station'), item('background:var(--gold);border-radius:50%;opacity:.4', 'Speakers (faint)')])));
     return;
   }
   if (S.step === 'today') {
@@ -547,11 +693,11 @@ function costChart() {
 
 function curveChart() {
   const run = G.st.runs[S.mode], st = run.stations, W = 300, H = 118, m = { l: 32, r: 8, t: 8, b: 22 };
-  const yMax = Math.ceil(st[st.length - 1].cum_pct / 10) * 10, x = n => m.l + (n / 400) * (W - m.l - m.r), y = p => H - m.b - (p / yMax) * (H - m.t - m.b);
+  const NM = st.length, yMax = Math.ceil(st[NM - 1].cum_pct / 10) * 10, x = n => m.l + (n / NM) * (W - m.l - m.r), y = p => H - m.b - (p / yMax) * (H - m.t - m.b);
   const s = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'vsvg', role: 'img', 'aria-label': `People within reach of ranger stations: ${fmt(R.popPct, 1)}% with ${S.n} stations; sweet spot ${spot.knee}, range ${spot.lo} to ${spot.hi}` });
   sv('rect', { x: x(spot.lo), y: m.t, width: x(spot.hi) - x(spot.lo), height: H - m.t - m.b, fill: 'var(--accent)', opacity: 0.1 }, s);
   for (const p of [0, yMax / 2, yMax]) { sv('line', { x1: m.l, x2: W - m.r, y1: y(p), y2: y(p), class: 'gl' }, s); svText(s, { x: m.l - 4, y: y(p) + 3, 'text-anchor': 'end', class: 'axl' }, `${p}%`); }
-  for (const n of [0, 100, 200, 300, 400]) svText(s, { x: x(n), y: H - 10, 'text-anchor': 'middle', class: 'axl' }, String(n));
+  for (const f of [0, 0.25, 0.5, 0.75, 1]) svText(s, { x: x(Math.round(NM * f)), y: H - 10, 'text-anchor': 'middle', class: 'axl' }, String(Math.round(NM * f)));
   sv('path', { d: `M${x(0)},${y(0)}${st.map((p, i) => `L${x(i + 1).toFixed(1)},${y(p.cum_pct).toFixed(1)}`).join('')}`, fill: 'none', stroke: `var(${MODES[S.mode].color})`, 'stroke-width': 2 }, s);
   sv('circle', { cx: x(spot.knee), cy: y(st[spot.knee - 1].cum_pct), r: 3.5, fill: 'var(--accent)' }, s);
   svText(s, { x: x(spot.knee) + 6, y: y(st[spot.knee - 1].cum_pct) + 14, class: 'sub' }, `sweet spot ${spot.knee}`);
@@ -560,6 +706,6 @@ function curveChart() {
     sv('line', { x1: x(S.n), x2: x(S.n), y1: m.t, y2: H - m.b, class: 'cursor' }, s);
     svText(s, { x: Math.min(x(S.n) + 5, W - 116), y: m.t + 10, class: 'lbl' }, `${fmt(p.cum_pct, 1)}% · $${fmt(p.cum_cost_musd, 1)}M`);
   }
-  const rows = [['Stations', 'People within reach', '15-yr cost'], ...[20, 40, 60, spot.knee, 100, 150, 200, 300, 400].sort((a, b) => a - b).map(n => [String(n), `${fmt(st[n - 1].cum_pct, 1)}%`, `$${fmt(st[n - 1].cum_cost_musd, 1)}M`])];
+  const rows = [['Stations', 'People within reach', '15-yr cost'], ...[...new Set([20, 40, 60, spot.knee, 100, 150, 200, 300, 400, NM])].filter(n => n <= NM).sort((a, b) => a - b).map(n => [String(n), `${fmt(st[n - 1].cum_pct, 1)}%`, `$${fmt(st[n - 1].cum_cost_musd, 1)}M`])];
   return chartBlock('co-curve', 'People within reach', s, rows);
 }

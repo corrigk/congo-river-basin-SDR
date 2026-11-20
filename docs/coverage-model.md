@@ -3,14 +3,27 @@
 The Design tab's alerting-chain steps, from brief v3 (`brief-v3-speakers-coverage.md`, kept in the team's SDR folder),
 built in stages (see `docs/sdr-plan.md`). Code in `src/s3/coverage/`; every number below is printed by `node scripts/coverage-report.mjs`.
 
-| Step | Link | Stage |
-| --- | --- | --- |
-| Who must hear it | `#design/hear` | 1 (done) |
-| How far a voice carries | `#design/sound` | 1 (done; terrain profiles in Stage 3) |
-| Where speakers go, device mix | | 3 |
-| Existing infrastructure, the gap table | Research tab | 2, 4 |
-| Who looks after them (stations from speakers), ranger reach | | 4 |
-| Where sensors go | | 5 |
+## The chain on the map
+
+Research and Design are one story on one map (`src/s3/steps.js`; → walks it, clickers work). Each step keeps the one
+before it faintly on the map and animates the new layer in, so the links are visible:
+
+| Step | Link | What feeds it | What it shows |
+| --- | --- | --- | --- |
+| Why | `#research` | | People, conflict, fire, floods, protected areas, infrastructure |
+| Today | `#research/today` | | Who existing networks reach (modeled proxy) |
+| Speakers & receivers | `#design` | People (where they cluster) and the Why map's hazards (rollout order) | Village speakers, receivers, urban centres; speakers fade in hazard-first |
+| Ranger stations | `#design/stations` | The speakers: each station looks after up to X within an 8-hour trip | Stations, each speaker area wired to its station, the SRR's 78 for comparison; crew-hours calculator |
+| S-3 network | `#design/network` | The speaker-driven stations ("Speakers" mode of the station slider) | Satellites, GEO footprint, hubs, data flow (stations ↔ nodes ↔ hub, alerts down), checks and cost |
+| Who must hear it · How far a voice carries | `#design/hear`, `#design/sound` | | Explainers, opened from the speakers step |
+
+| Coverage stage | Status |
+| --- | --- |
+| 1: definitions, acoustics | done |
+| Chain on the map (speakers → stations → network), modeled proxy | done |
+| 3: settlements (GRID3), speaker siting on real villages, terrain profiles | next: replaces the proxy, same output files |
+| 2: existing infrastructure; 4: gap classes, travel grid, ranger reach | after 3 |
+| 5: sensor risk map; 6: Trades integration, offline, run-through | after |
 
 ## Decisions (team, 2026-11-20)
 
@@ -124,3 +137,52 @@ Kwango (20,700 km², about 173k). The population grid, stations and towns all le
 proposed pilot area) was missing from the towns list. `build_geography.py` now fills interior gaps and the pipeline was
 rerun: the basin gained 123 grid cells and **0.66M people** in 2041 (222.0M → 222.7M); the station sweet spot is
 unchanged (78 stations, 40.6%, $36.6M), and Mbandaka (455k) is back in the towns list.
+
+## Speakers and receivers (modeled proxy until Stage 3)
+
+`analysis/scripts/site_speakers.py` → `analysis/data/speakers.json`. Per 1 km WorldPop pixel outside the urban centres,
+with people spread evenly in the pixel (the proxy's weakness: it undercounts how many one speaker hears in a compact
+village and overcounts speakers in towns):
+
+- people one speaker hears = people × min(1, A / pixel area), A = the area a village speaker's voice reaches at night
+  (534 m out of a 300 m clearing: 0.90 km²);
+- village speakers: as many as cover the pixel, each still hearing at least 150 people; none where one would hear fewer;
+- receivers: one per 500 people where no speaker goes; urban centres: phones and radio first (not sited).
+
+**Informed by the Why map:** speakers roll out in order of people heard × (1 + hazard score), the hazard score per grid
+cell being the mean of conflict deaths 2015–2024, fire detections 2024 and GDACS flood alerts within 50 km, each
+log-scaled to 0–1 (equal weights). The first tenth of the rollout sits at a mean hazard of 0.36 against 0.26 for all
+speakers.
+
+2041, base values: **234,991 village speakers** hearing **97.2M people (54.3% of the 179.0M rural and peri-urban)**;
+**159,087 receivers** for 79.5M people in smaller villages; 43.7M people in urban centres. Range **103k–732k speakers**
+(voice 889 m with a 300-person cutoff, to 372 m with a 50-person cutoff). By year: 146k (2026), 174k, 204k, 235k (2041).
+S3-05 counts every village speaker and receiver as a receiver: about 394k in 2041.
+
+## Ranger stations derived from the speakers
+
+`analysis/scripts/stations_from_speakers.py` → `analysis/data/stations_speaker.json`, on the SRR's candidate sites and
+travel model (`analysis/scripts/travel.py`, shared with `optimize_stations.py`). Rangers keep the village speakers
+(team decision). Each station looks after at most **X = crews × hours a year ÷ (visits a year × hours a visit)** speakers
+within an **8-hour trip** (`analysis/data/maintenance_params.json`, all assumptions TBR: 2 crews × 1,600 h ÷ (2 visits ×
+6 h) = **266**). Greedy capacitated cover: open the site that can take the most unassigned speakers, give it the nearest
+ones up to X, repeat; a site can hold more than one station.
+
+Result: **1,037 stations at 736 sites** for 200,752 speakers; **34,239 speakers have no candidate site within 8 h**.
+Those stations reach 58.8% of people by radio or a 1-hour response and cost **$512M over 15 years** on their own, more
+than the $400M cap. The trade table (stations needed):
+
+| X | 4 h | 8 h | 24 h |
+| --- | --- | --- | --- |
+| 50 | 3,959 | 4,197 | 4,652 |
+| 100 | 2,213 | 2,223 | 2,354 |
+| 200 | 1,370 | 1,268 | 1,202 |
+| 266 | 1,177 | 1,037 | 920 |
+| 400 | 1,003 | 811 | 639 |
+| 1,000 | 825 | 592 | 311 |
+| 2,000 | 783 | 541 | 220 |
+
+The S-3 network step uses these stations as the **Speakers** mode of its station slider: with all 1,037 the 15-year
+cost is about $882M; the slider (or the Mix mode) shows the cost-constrained versions side by side, as the team chose.
+Fewer speakers per village (settlement outlines), more speakers per crew, or communities keeping the smaller speakers
+are the levers; Stage 3 and 4 will move all of these numbers.

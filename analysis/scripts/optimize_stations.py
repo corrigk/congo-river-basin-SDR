@@ -22,88 +22,15 @@ which it first becomes covered (so the page can redraw the map for any N).
 """
 import json, os, math, heapq, base64
 import numpy as np
-from scipy.sparse import coo_matrix
-from scipy.sparse.csgraph import dijkstra
+# Grid, site typing and cost, radio sets and the travel graph live in travel.py (shared with stations_from_speakers.py).
+from travel import (P, C, idx, nx, res, lon, lat, km2, d_river, n, stype, COST, COST_HYDRO, radio_sets, cand, reach, tv)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "data")
 NMAX = 400
 MIX = {"radio": 0.50, "response": 0.35, "speaker": 0.15}
-KM_PER_DEG = 111.32
 
-P = json.load(open(os.path.join(OUT, "population.json")))
-C = json.load(open(os.path.join(OUT, "cost_model.json")))
-idx = np.array(P["cells"]["i"])
-nx, res = P["nx"], P["res_deg"]
-lon = P["lon0"] + (idx % nx) * res
-lat = P["lat0"] + (idx // nx) * res
-km2 = np.array(P["cells"]["km2"])
-d_river = np.array(P["cells"]["river_km"])
-d_road = np.array(P["cells"]["road_km"])
-d_town = np.array(P["cells"]["town_km"])
-n = len(idx)
-pos = {int(g): k for k, g in enumerate(idx)}
-
-# ---------------- site typing and cost ----------------
-access = (d_river <= 7) | (d_road <= 7) | (d_town <= 15)
-stype = np.where(d_road <= 7, "road", np.where(d_river <= 7, "river", "remote"))
-st = C["station"]
-base_capex = sum(i["usd"] for i in st["capex_items"])
-
-
-def site_cost(t, hydro=False):
-    capex = base_capex + st["access_kit"][t]["usd"]
-    batt = st["opex"]["battery_replacement_usd"]
-    extra = 0
-    if hydro and t == "river":
-        h = st["hydro_option"]
-        solar = next(i["usd"] for i in st["capex_items"] if i["id"] == "solar")
-        capex += h["hydro_capex_usd"] + h["reduced_solar_capex_usd"] - solar
-        batt = h["battery_replacement_usd"]
-        extra = h["extra_opex_usd_per_year"]
-    capex *= st["logistics_multiplier"][t]
-    life = C["life_years"]
-    opex = capex * st["opex"]["maintenance_pct_of_capex_per_year"] * life + batt \
-        + (st["opex"]["connectivity_usd_per_year"] + extra) * life
-    return capex, opex
-
-
-COST = {t: site_cost(t) for t in ("road", "river", "remote")}
-COST_HYDRO = site_cost("river", hydro=True)
-
-# ---------------- coverage sets ----------------
-xy = np.c_[lon * np.cos(np.radians(lat)), lat] * KM_PER_DEG
-from scipy.spatial import cKDTree
-tree = cKDTree(xy)
-R = C["radio"]["radius_km"]
-radio_sets = tree.query_ball_point(xy, r=R + 1e-6)
-
-# travel-time graph (minutes) on 8-neighbour grid
-tv = C["travel"]
-speed = np.where(d_river <= tv["corridor_km"], tv["boat_kmh"],
-                 np.where(d_road <= tv["corridor_km"], tv["road_kmh"], tv["foot_kmh"]))
-rows, cols, w = [], [], []
-for di in (-1, 0, 1):
-    for dj in (-1, 0, 1):
-        if di == dj == 0:
-            continue
-        for k in range(n):
-            g = idx[k] + di * nx + dj
-            j = pos.get(int(g))
-            if j is None:
-                continue
-            dist = math.hypot(dj * math.cos(math.radians(lat[k])), di) * res * KM_PER_DEG
-            t = 0.5 * dist / speed[k] * 60 + 0.5 * dist / speed[j] * 60
-            rows.append(k); cols.append(j); w.append(t)
-G = coo_matrix((w, (rows, cols)), shape=(n, n)).tocsr()
-cand = np.nonzero(access)[0]
-resp_sets = {}
-B = 500
-for s in range(0, len(cand), B):
-    ids = cand[s:s + B]
-    D = dijkstra(G, indices=ids, limit=tv["limit_min"])
-    for r_, k in enumerate(ids):
-        resp_sets[int(k)] = np.nonzero(D[r_] <= tv["limit_min"])[0]
+resp_sets = reach(cand, tv["limit_min"])
 
 L = C["loudspeaker"]
 spk_area = math.pi * L["intelligible_radius_km"] ** 2

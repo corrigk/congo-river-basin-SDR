@@ -3,7 +3,7 @@
 import core from './data/core.json';
 
 export const D = core;
-const loaders = import.meta.glob(['./data/geo.json', './data/grid.json', './data/pop-*.json', './data/stations-*.json', './data/hazards.json', './data/today.json'], { import: 'default' });
+const loaders = import.meta.glob(['./data/geo.json', './data/grid.json', './data/pop-*.json', './data/stations-*.json', './data/hazards.json', './data/today.json', './data/coverage.json'], { import: 'default' });
 const cache = new Map();
 const load = name => {
   if (!cache.has(name)) cache.set(name, loaders[`./data/${name}.json`]().catch(e => { cache.delete(name); throw e; }));
@@ -15,6 +15,7 @@ export const pop = year => load(`pop-${year}`);
 export const stations = year => load(`stations-${year}`);
 export const hazards = () => load('hazards'); // ConOps "why" layers
 export const today = () => load('today'); // ConOps "today" layer: towns with a modeled reach radius
+export const coverage = () => load('coverage'); // speakers, receivers and the stations derived from them
 
 // first_covered_b64: little-endian Uint16 per cell, the index of the first station that covers it (65535 = never).
 const firstCache = new Map();
@@ -33,4 +34,5 @@ export const MODES = {
   response: { name: '1-hour response', short: '1-hour', color: '--s2' },
   speaker: { name: 'Loudspeaker', short: 'Speaker', color: '--s3' },
   mix: { name: 'Mix', short: 'Mix', color: '--s4' },
+  alerts: { name: 'Speaker-driven (looks after the village speakers)', short: 'Speakers', color: '--gold' },
 };

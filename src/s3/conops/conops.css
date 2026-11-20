@@ -3,16 +3,22 @@
 .co-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex: none; }
 .co-title { margin: 2px 0 0; font-family: var(--display); font-style: italic; font-weight: 900; text-transform: uppercase; font-size: 36px; line-height: .95; }
 .co-title > span { display: none; }
-.co[data-step="why"] .co-t-why, .co[data-step="today"] .co-t-today, .co[data-step="what"] .co-t-what { display: inline; }
+.co[data-step="why"] .co-t-why, .co[data-step="today"] .co-t-today, .co[data-step="alerts"] .co-t-alerts, .co[data-step="stations"] .co-t-stations, .co[data-step="what"] .co-t-what { display: inline; }
 .co-step button { padding: 6px 14px; font-size: 13px; }
 .co-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) clamp(286px, 18vw, 360px) clamp(344px, 22vw, 440px); gap: 14px; }
 .co-mapcol { min-height: 0; display: flex; flex-direction: column; gap: 6px; }
 .co-map { flex: 1; min-height: 0; display: flex; align-items: flex-start; justify-content: center; }
 .co-mapwrap { position: relative; }
 .co-cv { position: absolute; inset: 0; }
-.co-why, .co-today, .co-what, .co-flow { transition: opacity .9s var(--ease); }
+.co-why, .co-today, .co-alerts, .co-stations, .co-what, .co-flow { transition: opacity .9s var(--ease); }
 .co:not([data-step="why"]) .co-why, .co:not([data-step="today"]) .co-today, .co:not([data-step="what"]) :is(.co-what, .co-flow) { opacity: 0; pointer-events: none; }
-.co:not([data-step="what"]) .co-hud:not(.co-hud-today), .co:not([data-step="today"]) .co-hud-today { opacity: 0; pointer-events: none; }
+/* the chain stays visible: speakers under the stations, station links under the network */
+.co:not(:is([data-step="alerts"], [data-step="stations"])) .co-alerts { opacity: 0; }
+.co[data-step="stations"] .co-alerts { opacity: .38; }
+.co:not(:is([data-step="stations"], [data-step="what"])) .co-stations { opacity: 0; }
+.co[data-step="what"] .co-stations { opacity: .3; }
+.co-alerts, .co-stations { pointer-events: none; }
+.co:not([data-step="what"]) .co-hud:not(:is(.co-hud-today, .co-hud-alerts, .co-hud-stations)), .co:not([data-step="today"]) .co-hud-today, .co:not([data-step="alerts"]) .co-hud-alerts, .co:not([data-step="stations"]) .co-hud-stations { opacity: 0; pointer-events: none; }
 .co-flow { pointer-events: none; }
 .co-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; font-size: 11.5px; color: var(--muted); flex: none; }
 .co-legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
@@ -21,7 +27,7 @@
 .co-col { min-height: 0; overflow-y: auto; scrollbar-width: thin; padding-right: 2px; }
 .co-pane { display: flex; flex-direction: column; gap: 8px; }
 .co-pane { display: none; }
-.co[data-step="why"] .co-pane.is-why, .co[data-step="today"] .co-pane.is-today, .co[data-step="what"] .co-pane.is-what { display: flex; animation: co-in .6s var(--ease) both; }
+.co[data-step="why"] .co-pane.is-why, .co[data-step="today"] .co-pane.is-today, .co[data-step="alerts"] .co-pane.is-alerts, .co[data-step="stations"] .co-pane.is-stations, .co[data-step="what"] .co-pane.is-what { display: flex; animation: co-in .6s var(--ease) both; }
 @keyframes co-in { from { opacity: 0; transform: translateY(6px); } }
 .co-h { margin: 6px 0 2px; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
 .co-note, .co-hint { margin: 2px 0 0; font-size: 11.5px; color: var(--muted); line-height: 1.45; }
@@ -161,5 +167,15 @@ em.is-good { color: var(--good); } em.is-bad { color: var(--critical); } em.is-n
 .co-cmp-r.is-bad .co-cmp-n { color: var(--critical); }
 
 /* Research and Design share this view: the eyebrow follows the step (the step buttons come from src/s3/steps.js) */
-.co-e-design, .co[data-step="what"] .co-e-research { display: none; }
-.co[data-step="what"] .co-e-design { display: inline; }
+.co-e-design, .co:is([data-step="alerts"], [data-step="stations"], [data-step="what"]) .co-e-research { display: none; }
+.co:is([data-step="alerts"], [data-step="stations"], [data-step="what"]) .co-e-design { display: inline; }
+
+/* the chain panes: speakers -> stations -> network */
+.co-hud-alerts, .co-hud-stations { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.co-chain { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11.5px; color: var(--muted); }
+.co-chain b { color: var(--text); }
+.co-chain i { font-style: normal; color: var(--accent); }
+.co-explain { display: flex; flex-wrap: wrap; gap: 6px; }
+.co-calc { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 12px; align-items: center; }
+.co-calc b { font-variant-numeric: tabular-nums; }
+.co-calc input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--gold); }

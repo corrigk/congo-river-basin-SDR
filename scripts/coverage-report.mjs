@@ -5,6 +5,7 @@ import { briefTable, rangeTo, threshold, value, paths, CASES, areaKm2 } from '..
 
 const read = f => JSON.parse(fs.readFileSync(new URL(`../${f}`, import.meta.url), 'utf8'));
 const U = read('analysis/data/urbanisation.json'), core = read('src/s3/v2/data/core.json'), bare = read('designs/bare-minimum.json');
+const SP = read('analysis/data/speakers.json'), SS = read('analysis/data/stations_speaker.json');
 const Y = '2041', y = U.by_year[Y], recv = core.sn.community_receivers[Y];
 const M = v => `${(v / 1e6).toFixed(1)}M`, pct = v => `${(v * 100).toFixed(1)}%`;
 
@@ -32,3 +33,17 @@ const srr = core.budget.sweet_spots.find(s => s.run === 'mix_2041').stations;
 console.log(`  rural people ${M(recv.rural_pop)} -> ~${Math.round(villages / 1000)}k villages of ${value('people_per_village')} (receivers today: ${recv.receivers.toLocaleString('en-US')})`);
 console.log(`  one village speaker each: ~${Math.round(villages / 1000)}k speakers; ${Math.round(villages / srr).toLocaleString('en-US')} per station with ${srr} stations, ${Math.round(villages / bare.n).toLocaleString('en-US')} with the bare minimum's ${bare.n}`);
 console.log(`  installed: $${(villages * value('t1_installed_usd', 'low') / 1e9).toFixed(1)}–${(villages * value('t1_installed_usd', 'high') / 1e9).toFixed(1)}B at $${value('t1_installed_usd', 'low')}–${value('t1_installed_usd', 'high')} each, vs the $400M cap`);
+
+console.log('\n== Speakers and receivers (modeled proxy on WorldPop 1 km; site_speakers.py)');
+const sy = SP.by_year[SP.year];
+console.log(`  ${SP.year}: ${sy.t1.toLocaleString('en-US')} village speakers hear ${M(sy.t1_heard)} (${sy.t1_heard_pct}% of ${M(sy.design_pop)}); ${sy.t2.toLocaleString('en-US')} receivers for ${M(sy.t2_pop)}; urban centres ${M(sy.urban_pop)}`);
+for (const b of ['high', 'base', 'low']) console.log(`  ${b.padEnd(4)}: voice ${SP.bands[b].radius_m} m, cutoff ${SP.bands[b].cutoff}: ${SP.bands[b].t1.toLocaleString('en-US')} speakers, ${SP.bands[b].t1_heard_pct}%`);
+console.log(`  rollout: first tenth mean hazard ${SP.rollout.first_tenth_mean_hazard} vs ${SP.rollout.all_mean_hazard} for all speakers`);
+console.log(`  by year: ${Object.entries(SP.by_year).map(([y, v]) => `${y} ${v.t1.toLocaleString('en-US')}`).join(', ')}`);
+
+console.log('\n== Ranger stations derived from the speakers (stations_from_speakers.py)');
+console.log(`  X = ${SS.X} speakers per station (${Object.entries(SS.x_formula).map(([k, v]) => `${k} ${v}`).join(', ')}), longest trip ${SS.T_maint_h} h`);
+console.log(`  ${SS.stations.length.toLocaleString('en-US')} stations at ${SS.sites} sites; ${SS.assigned.toLocaleString('en-US')} speakers assigned, ${SS.unassigned.toLocaleString('en-US')} beyond reach; SRR sweet spot ${SS.compare.srr_sweet_spot}`);
+const last = SS.runs['2041'].stations.at(-1);
+console.log(`  these stations: ${last.cum_pct}% of people by radio or 1-hour response, $${last.cum_cost_musd}M over 15 years`);
+for (const [t, rows] of Object.entries(SS.sweep)) console.log(`  ${t.padStart(2)} h: ${rows.map(r => `X ${r.X}: ${r.stations}`).join(' · ')}`);

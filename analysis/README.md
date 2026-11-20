@@ -29,12 +29,14 @@ PY=.venv/Scripts/python
 $PY scripts/build_geography.py --basin ../src/data/basin.json --basin-name "HydroSHEDS HydroBASINS (level 6 catchments dissolved to the Congo basin; repo src/data/basin.json)"
 $PY scripts/prep_wdpa.py                                  # needs basin.geojson from the step above
 $PY scripts/build_population.py --worldpop raw/worldpop/*.tif
-$PY scripts/optimize_stations.py
+$PY scripts/optimize_stations.py                          # uses travel.py (grid, sites, travel graph); run without -I
 $PY scripts/site_databases.py
 $PY scripts/leo_revisit.py
 $PY scripts/build_sensors_comms_budget.py                 # uses the WDPA polygons when raw/wdpa has them
 $PY -I scripts/build_hazards.py                           # conflict, fire and flood layers for the ConOps 'why' map
 $PY -I scripts/build_urbanisation.py                      # urban centres / peri-urban / rural (Degree of Urbanisation) for the Design tab
+$PY scripts/site_speakers.py                              # village speakers and receivers (modeled proxy until GRID3), hazard-first rollout
+$PY scripts/stations_from_speakers.py                     # ranger stations derived from the speakers (X per station, 8 h trips)
 ```
 
 Leave out `--basin`, `--worldpop` or the WDPA files to fall back to the original modeled proxies.

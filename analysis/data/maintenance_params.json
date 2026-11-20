@@ -1,0 +1,9 @@
+{
+  "_note": "Who looks after the village speakers (brief v3 §9): rangers keep the station tower and village speakers (team decision, 2026-11-20). Every value is an assumption (TBR) for the crew-hours calculator; the page lets the team change them.",
+  "_method": "X (speakers one station can look after) = crews x hours per crew per year / (visits per speaker per year x hours per visit). Hours per visit include travel there and back.",
+  "t_maint_h": { "label": "Longest one-way trip from a station to a speaker it looks after", "unit": "h", "low": 4, "base": 8, "high": 24, "basis": "assumption" },
+  "crews_per_station": { "label": "Field crews per station", "unit": "crews", "low": 1, "base": 2, "high": 3, "basis": "assumption" },
+  "crew_hours_yr": { "label": "Working hours per crew per year", "unit": "h", "low": 1400, "base": 1600, "high": 1800, "basis": "assumption", "note": "About 200 field days of 8 h" },
+  "visits_per_speaker_yr": { "label": "Visits per speaker per year", "unit": "visits", "low": 1, "base": 2, "high": 4, "basis": "assumption", "note": "One routine service plus one repair" },
+  "hours_per_visit": { "label": "Hours per visit, travel included", "unit": "h", "low": 4, "base": 6, "high": 10, "basis": "assumption", "note": "2 h on site + about 4 h travel there and back" }
+}

@@ -4,7 +4,7 @@ import './s3/v2/v2.css'; // tokens and labels (.vtag) used across the tabs
 import { ICON, MARK } from './icons.js';
 import * as V from './s3/views.js';
 import { createOffline } from './s3/offline.js';
-import { STORY, TAB_OF, VIEW_OF as VIEW_OF_STEP, TITLE } from './s3/steps.js';
+import { STORY, TAB_OF, VIEW_OF as VIEW_OF_STEP, TITLE, storyIndex, hashOf, stepOfHash } from './s3/steps.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -15,7 +15,7 @@ const app = $('#app');
 // (src/s3/conops) or the alerting chain (src/s3/coverage). Trades is the SDR workbench (src/sdr).
 const TABS = ['research', 'design', 'trades'];
 const view = () => (state.tab === 'trades' ? 'sdr' : VIEW_OF_STEP[state.step]);
-const last = { research: 'why', design: 'what' }; // the step each tab returns to
+const last = { research: 'why', design: 'alerts' }; // the step each tab returns to
 
 // ---------- static chrome ----------
 $('#brand-mark').innerHTML = MARK;
@@ -33,19 +33,20 @@ const pref = {
   setPresent: v => { try { localStorage.setItem('srr-present', v ? '1' : '0'); } catch { /* private mode: no memory */ } },
 };
 
-// ---------- routing: #research, #research/today, #design, #trades, #trades/present/3 ----------
+// ---------- routing: #research, #research/today, #design[/stations|/network|/hear|/sound], #trades, #trades/present/3 ----------
 // SRR-era links still land: #conops[/today|/what] → Research or Design, #sdr[/present/N] → Trades, anything else → Research.
 function readHash() {
   const [tab, sub, n] = location.hash.slice(1).split('/');
   const slide = sub === 'present' ? Math.max(0, (+n || 1) - 1) : null;
   if (tab === 'trades' || tab === 'sdr') { state.tab = 'trades'; state.sdrSlide = slide; return; }
-  if (tab === 'design' || (tab === 'conops' && sub === 'what')) { state.tab = 'design'; state.step = TAB_OF[sub] === 'design' ? sub : 'what'; return; }
+  if (tab === 'design') { state.tab = 'design'; state.step = stepOfHash(sub) || 'alerts'; return; }
+  if (tab === 'conops' && sub === 'what') { state.tab = 'design'; state.step = 'what'; return; }
   state.tab = 'research';
   state.step = sub === 'today' ? 'today' : 'why';
 }
 function writeHash() {
   const h = state.tab === 'trades' ? `#trades${state.sdrSlide != null ? `/present/${state.sdrSlide + 1}` : ''}`
-    : state.tab === 'design' ? `#design${state.step === 'what' ? '' : `/${state.step}`}` : `#research${state.step === 'today' ? '/today' : ''}`;
+    : state.tab === 'design' ? `#design${state.step === 'alerts' ? '' : `/${hashOf(state.step)}`}` : `#research${state.step === 'today' ? '/today' : ''}`;
   if (location.hash !== h) history.replaceState(null, '', h);
 }
 addEventListener('hashchange', () => { readHash(); render(); });
@@ -97,9 +98,9 @@ function renderCoverage() {
   (coverage ||= import('./s3/coverage/view.js').then(m => { m.mount($('#view-coverage'), state.step); return m; }))
     .then(m => { if (view() === 'coverage') m.setStep(state.step); });
 }
-// One story across both tabs: Why → Today (Research) → S-3 system → who must hear it → how far a voice carries (Design).
+// One story across both tabs: Why → Today (Research) → speakers and receivers → ranger stations → S-3 network (Design).
 function goStory(delta) {
-  const i = STORY.indexOf(state.step);
+  const i = storyIndex(state.step);
   setStep(STORY[Math.max(0, Math.min(STORY.length - 1, i + delta))]);
 }
 function setStep(step) {

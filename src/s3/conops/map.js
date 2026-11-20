@@ -1,7 +1,9 @@
-// ConOps map: stacked canvases over the same projection. Base (borders, basin, rivers) never moves; the "why" layer
-// (people, conflict, fire, floods, protected areas, existing infrastructure), the "today" layer (who existing
-// networks reach: a modeled proxy) and the "what" layer (coverage, stations, repeaters, sensors, databases,
-// footprints, data flow) crossfade when the step changes.
+// The basin map: stacked canvases over the same projection. Base (borders, basin, rivers) never moves; one layer per
+// step of the story crossfades in: "why" (people, conflict, fire, floods, protected areas, infrastructure), "today"
+// (who existing networks reach: a modeled proxy), "alerts" (village speakers and receivers, placed where people and
+// hazards meet), "stations" (ranger stations derived from those speakers, each speaker wired to its station) and
+// "what", the S-3 network (coverage, stations, repeaters, sensors, databases, footprints, data flow). Each step keeps
+// the one before it faintly on the map (src/s3/conops/conops.css), and play() animates the new layer in.
 import { D } from '../v2/data.js';
 import { el, css, fmt, kv, showTip, hideTip } from '../v2/ui.js';
 
@@ -20,18 +22,19 @@ export const familyOf = id => Object.keys(FAMILY).find(f => FAMILY[f].types.incl
 // opts: { onNode(name) } ; draw(G, S, R): G = loaded data, S = ConOps state, R = model result
 export function createConopsMap(holder, opts = {}) {
   const wrap = el('div', { class: 'co-mapwrap', role: 'img' });
-  const cvs = ['base', 'why', 'today', 'what', 'flow'].map(k => el('canvas', { class: `co-cv co-${k}`, 'aria-hidden': 'true' }));
+  const cvs = ['base', 'why', 'today', 'alerts', 'stations', 'what', 'flow'].map(k => el('canvas', { class: `co-cv co-${k}`, 'aria-hidden': 'true' }));
   wrap.append(...cvs);
   holder.replaceChildren(wrap);
-  const [cb, cw, ct, cx, cf] = cvs.map(c => c.getContext('2d'));
-  let W = 500, H = 500, G = null, S = null, hits = { why: [], today: [], what: [] };
+  const ctxs = cvs.map(c => c.getContext('2d'));
+  const [cb, cw, ct, ca, cs, cx, cf] = ctxs;
+  let W = 500, H = 500, G = null, S = null, hits = { why: [], today: [], alerts: [], stations: [], what: [] };
 
   function size() {
     const maxW = holder.clientWidth || 500, maxH = holder.clientHeight || maxW * ASPECT;
     W = Math.max(260, Math.min(maxW, maxH / ASPECT)); H = W * ASPECT;
     const dpr = devicePixelRatio || 1;
     wrap.style.width = `${W}px`; wrap.style.height = `${H}px`;
-    for (const [c, x] of [[cvs[0], cb], [cvs[1], cw], [cvs[2], ct], [cvs[3], cx], [cvs[4], cf]]) {
+    for (const [c, x] of cvs.map((c, i) => [c, ctxs[i]])) {
       c.width = W * dpr; c.height = H * dpr; c.style.width = `${W}px`; c.style.height = `${H}px`;
       x.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
@@ -176,6 +179,73 @@ export function createConopsMap(holder, opts = {}) {
       if (t.pop >= 5e5) label(ct, t.name, x + 5, y - 4, css('--muted'), 10.5, 500);
       h.push({ x, y, r: 6, tip: () => [el('b', { text: t.name }), kv('Population', fmt(t.pop)), kv('Network reach (modeled)', `${t.r} km`), el('div', { class: 'k', text: 'Proxy: radius set by town size' })] });
     }
+  }
+
+  // ---------- alerts: village speakers and receivers, where people and hazards meet ----------
+  // Speakers (gold) appear in rollout order: people heard x (1 + hazard), so the crowded, high-hazard places come
+  // first. Receivers (blue) cover the villages too small for a speaker; urban centres (outlined) rely on phones first.
+  let alertsP = 1, stationsP = 1, play_ = 0;
+  function drawAlerts() {
+    const C = G.cov.cells, L = S.alerts, h = hits.alerts = [];
+    ca.clearRect(0, 0, W, H);
+    if (L.hazard) { const warm = css('--rust-hi'); for (let k = 0; k < C.hazard.length; k++) if (C.hazard[k] > 0.12) { ca.globalAlpha = Math.min(0.42, C.hazard[k] * 0.5); cellRect(ca, k, warm); } ca.globalAlpha = 1; }
+    stroke(ca, G.geo.basin, css('--accent'), 1.4);
+    const cellPx = (G.grid.res_deg / (BB.lon1 - BB.lon0)) * W;
+    if (L.receivers) {
+      ca.fillStyle = css('--river');
+      for (let k = 0; k < C.t2.length; k++) if (C.t2[k] >= 1 && !C.t1[k]) { const [x, y] = px(...G.cellLL[k]); ca.globalAlpha = Math.min(0.75, 0.18 + Math.log10(C.t2[k]) * 0.2); ca.beginPath(); ca.arc(x, y, Math.max(0.8, cellPx * 0.28), 0, 7); ca.fill(); }
+      ca.globalAlpha = 1;
+    }
+    if (L.urban) {
+      ca.strokeStyle = css('--s2'); ca.lineWidth = 1.2;
+      for (let k = 0; k < C.t1.length; k++) if (G.cov.urbanCells.has(k)) { const res = G.grid.res_deg, [x, y] = px(G.cellLL[k][0] - res / 2, G.cellLL[k][1] + res / 2); ca.strokeRect(x, y, cellPx, cellPx); }
+    }
+    if (L.speakers) {
+      // Cells shaded by how many speakers they hold (log scale), so crowded areas stand out and the hazard tint shows.
+      const gold = css('--gold'), order = G.cov.order, nShow = Math.round(order.length * alertsP);
+      for (let j = 0; j < nShow; j++) {
+        const k = order[j];
+        ca.globalAlpha = 0.18 + 0.62 * Math.min(1, Math.log10(1 + C.t1[k]) / 2.6); cellRect(ca, k, gold);
+      }
+      ca.globalAlpha = 1;
+    }
+    for (const c of D.db.candidates.filter(c => !c.excluded)) { const [x, y] = px(c.lon, c.lat); label(ca, c.name, x + 5, y - 4, css('--muted'), 10.5, 500); }
+  }
+
+  // ---------- stations: derived from the speakers; every speaker cell wired to the station that looks after it ----------
+  function drawStations() {
+    const st = G.cov.stations, L = S.stationsShow, h = hits.stations = [];
+    cs.clearRect(0, 0, W, H);
+    stroke(cs, G.geo.basin, css('--accent'), 1.4);
+    const nShow = Math.round(st.list.length * stationsP), owner = G.cov.owner;
+    if (L.links) {
+      cs.strokeStyle = css('--text'); cs.lineWidth = 0.6; cs.globalAlpha = 0.42; // ink on the gold speaker cells
+      cs.beginPath();
+      for (let k = 0; k < owner.length; k++) {
+        const o = owner[k]; if (o === 65535 || o >= nShow) continue;
+        const [a, b] = px(...G.cellLL[k]), s = st.list[o], [c, d] = px(s[0], s[1]);
+        cs.moveTo(a, b); cs.lineTo(c, d);
+      }
+      cs.stroke(); cs.globalAlpha = 1;
+    }
+    if (L.srr) {
+      cs.strokeStyle = css('--muted'); cs.lineWidth = 1.2;
+      for (const s of G.cov.srr) { const [x, y] = px(s.lon, s.lat); shape(cs, s.type, x, y, 4.4); cs.stroke(); }
+    }
+    const text = css('--text'), edge = css('--bg');
+    for (let i = 0; i < nShow; i++) {
+      const [lon, lat, type, nsp, maxH, meanH] = st.list[i], [x, y] = px(lon, lat), r = 2.2 + Math.min(2.6, nsp / 120);
+      shape(cs, type, x, y, r); cs.fillStyle = text; cs.fill(); cs.strokeStyle = edge; cs.lineWidth = 1; cs.stroke();
+      h.push({ x, y, r: Math.max(5, r + 2), tip: () => [el('b', { text: `Ranger station #${i + 1} · ${type} access` }), kv('Village speakers it looks after', fmt(nsp)), kv('Longest trip', `${fmt(maxH, 1)} h`), kv('Average trip', `${fmt(meanH, 1)} h`), el('div', { class: 'k', text: 'Derived from the speakers (modeled proxy)' })] });
+    }
+  }
+  // Animate the new step's layer in. A timer, not animation frames, so it also finishes in a background tab.
+  function play(step) {
+    clearInterval(play_);
+    const run = (set, draw, ms) => { const t0 = performance.now(); set(0); draw(); play_ = setInterval(() => { const p = Math.min(1, (performance.now() - t0) / ms); set(p * p * (3 - 2 * p)); draw(); if (p >= 1) clearInterval(play_); }, 33); };
+    if (step === 'alerts') run(v => { alertsP = v; }, drawAlerts, 1700);
+    else if (step === 'stations') { alertsP = 1; drawAlerts(); run(v => { stationsP = v; }, drawStations, 1500); }
+    else { alertsP = 1; stationsP = 1; drawAlerts(); drawStations(); }
   }
 
   // ---------- what: what S-3 builds, where, and how many ----------
@@ -355,6 +425,15 @@ export function createConopsMap(holder, opts = {}) {
     if (k == null) return hideTip();
     const nodes = [el('b', { text: `${fmt(G.pop[k])} people` }), kv('Density', `${fmt(G.pop[k] / g.km2[k], 1)} /km²`), kv('Country', g.country[k])];
     if (S.step === 'today') nodes.push(kv('Existing network reach (modeled proxy)', G.todayReach.flags[k] ? 'yes' : 'no'));
+    else if (S.step === 'alerts' || S.step === 'stations') {
+      const C = G.cov.cells, o = G.cov.owner[k];
+      if (C.t1[k]) nodes.push(kv('Village speakers', `${fmt(C.t1[k])} (heard by ${fmt(C.heard[k])} people)`));
+      if (C.t2[k] >= 1) nodes.push(kv('Community receivers', fmt(C.t2[k])));
+      if (G.cov.urbanCells.has(k)) nodes.push(kv('Urban centre', 'phones and radio first'));
+      nodes.push(kv('Hazard score', `${fmt(C.hazard[k] * 100)} / 100`));
+      if (S.step === 'stations' && C.t1[k]) nodes.push(kv('Looked after by', o === 65535 ? 'no station within 8 h' : `station #${o + 1}`));
+      nodes.push(el('div', { class: 'k', text: 'Modeled proxy until settlement data (Stage 3)' }));
+    }
     else if (S.step === 'why') {
       const fire = G.hz.fires.cells[i], con = G.hz.conflict.cells[i];
       if (fire) nodes.push(kv('Fire detections 2024', fmt(fire)));
@@ -375,7 +454,10 @@ export function createConopsMap(holder, opts = {}) {
   return {
     wrap, // the view puts the numbers overlay in here
     // full redraw (data, year or size changed)
-    draw(g, s, R) { G = g; S = s; size(); drawBase(); drawWhy(); drawToday(); drawWhat(R); this.describe(R); },
+    draw(g, s, R) { G = g; S = s; size(); drawBase(); drawWhy(); drawToday(); drawAlerts(); drawStations(); drawWhat(R); this.describe(R); },
+    drawAlerts(s) { S = s; drawAlerts(); },
+    drawStations(s) { S = s; drawStations(); },
+    play(step) { play(step); },
     drawToday(s) { S = s; drawToday(); },
     // step or flow toggles changed: start or stop the animation
     sync(s) { S = s; drawFlows(performance.now()); syncAnim(); },
@@ -383,7 +465,12 @@ export function createConopsMap(holder, opts = {}) {
     drawWhat(s, R) { S = s; drawWhat(R); this.describe(R); },
     drawWhy(s) { S = s; drawWhy(); },
     describe(R) {
-      wrap.setAttribute('aria-label', S.step === 'today'
+      const cv = G.cov;
+      wrap.setAttribute('aria-label', S.step === 'alerts'
+        ? `Map of village speakers and receivers (modeled proxy): ${fmt(cv.by_year[cv.year].t1)} speakers where people cluster, placed first where hazards are highest, ${fmt(cv.by_year[cv.year].t2)} receivers for smaller villages, urban centres reached by phones first.`
+        : S.step === 'stations'
+        ? `Map of ${fmt(cv.stations.list.length)} ranger stations derived from the speakers, each looking after up to ${cv.stations.X} speakers within ${cv.stations.T_maint_h} hours, with lines from each speaker area to its station; the SRR's ${cv.stations.compare.srr_sweet_spot} stations for comparison.`
+        : S.step === 'today'
         ? `Map of what the basin has today with no S-3: existing town networks (a modeled proxy) reach about ${fmt(G.todayNow.peoplePct)}% of people and ${fmt(G.todayNow.areaPct, 1)}% of the land.`
         : S.step === 'why'
         ? `Map of the Congo River Basin: population density, ${fmt(G.hz.conflict.events)} violent events 2015–2024, ${fmt(G.hz.fires.detections)} fire detections in 2024, ${G.hz.floods.events.length} flood alerts, protected areas and existing infrastructure.`
