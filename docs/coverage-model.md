@@ -21,8 +21,10 @@ before it faintly on the map and animates the new layer in, so the links are vis
 | Coverage stage | Status |
 | --- | --- |
 | 1: definitions, acoustics | done |
-| Chain on the map (speakers → stations → network), modeled proxy | done |
-| 3: settlements (GRID3), speaker siting on real villages, terrain profiles | next: replaces the proxy, same output files |
+| Chain on the map (speakers → stations → network) | done |
+| What's at a station (station design) | done |
+| 3: settlements (GRID3, DRC) and speaker siting on real villages | done |
+| 3: pilot terrain and canopy profiles (Copernicus DEM, ETH canopy); other countries' settlements | next |
 | 2: existing infrastructure; 4: gap classes, travel grid, ranger reach | after 3 |
 | 5: sensor risk map; 6: Trades integration, offline, run-through | after |
 
@@ -139,26 +141,39 @@ proposed pilot area) was missing from the towns list. `build_geography.py` now f
 rerun: the basin gained 123 grid cells and **0.66M people** in 2041 (222.0M → 222.7M); the station sweet spot is
 unchanged (78 stations, 40.6%, $36.6M), and Mbandaka (455k) is back in the towns list.
 
-## Speakers and receivers (modeled proxy until Stage 3)
+## Speakers and receivers (Stage 3: real settlements in the DRC)
 
-`analysis/scripts/site_speakers.py` → `analysis/data/speakers.json`. Per 1 km WorldPop pixel outside the urban centres,
-with people spread evenly in the pixel (the proxy's weakness: it undercounts how many one speaker hears in a compact
-village and overcounts speakers in towns):
+**Settlements.** `analysis/scripts/build_settlements.py` reads GRID3 COD Settlement Extents v4.0 (CIESIN / GRID3,
+July 2026, CC BY-SA 4.0; `raw/grid3/grid3_cod_settlement_extents_v4.gpkg`, 912 MB, downloaded 2026-11-20 from
+Columbia Academic Commons, DOI 10.7916/bb5b-9b79, not committed): 1,152,927 settlement blocks with building counts,
+1,084,318 inside the basin. GRID3 has no population, so people per block = buildings × people per building, calibrated
+per grid cell: each DRC cell's WorldPop 2020 people are shared among its buildings, capped at 15 per building
+(assumption), the rest counted as living outside the mapped settlements. Calibrating per 14 km cell matters: sharing
+per 1 km pixel left half the DRC's people in pixels with no block, because WorldPop spreads people smoothly while GRID3
+puts them at the buildings. Result: 82.0M of the DRC's 85.9M people (2020) in blocks, 5.5M outside, a median of 5.7
+people per building (DRC households average about 5). Built-up blocks hold 34.6M, small settlement areas 36.6M, hamlets
+10.8M.
 
-- people one speaker hears = people × min(1, A / pixel area), A = the area a village speaker's voice reaches at night
-  (534 m out of a 300 m clearing: 0.90 km²);
-- village speakers: as many as cover the pixel, each still hearing at least 150 people; none where one would hear fewer;
-- receivers: one per 500 people where no speaker goes; urban centres: phones and radio first (not sited).
+**Speakers.** `analysis/scripts/site_speakers.py`. In the DRC a speaker covers every block whose centre is within its
+voice radius (534 m at night out of a 300 m clearing; terrain comes with the pilot DEM); built-up blocks larger than one
+speaker's area get several; greedy maximum coverage places the speaker reaching the most people still uncovered, down to
+150 people. Blocks left over get a receiver each (at least 10 people; one per 500 beyond), and people outside the mapped
+settlements one per 500. Outside the DRC (24% of the basin's people) the WorldPop proxy stays until those countries'
+settlement data is added (GRID3 Republic of Congo; Google Open Buildings elsewhere). Urban centres rely on phones and
+radio first.
 
-**Informed by the Why map:** speakers roll out in order of people heard × (1 + hazard score), the hazard score per grid
-cell being the mean of conflict deaths 2015–2024, fire detections 2024 and GDACS flood alerts within 50 km, each
-log-scaled to 0–1 (equal weights). The first tenth of the rollout sits at a mean hazard of 0.36 against 0.26 for all
-speakers.
+**Informed by the Why map:** speakers roll out in order of people heard per speaker × (1 + hazard score), the hazard
+score per grid cell being the mean of conflict deaths 2015–2024, fire detections 2024 and GDACS flood alerts within
+50 km, each log-scaled to 0–1 (equal weights). The first tenth of the rollout sits at a mean hazard of 0.32 against
+0.21 for all speakers.
 
-2041, base values: **234,991 village speakers** hearing **97.2M people (54.3% of the 179.0M rural and peri-urban)**;
-**159,087 receivers** for 79.5M people in smaller villages; 43.7M people in urban centres. Range **103k–732k speakers**
-(voice 889 m with a 300-person cutoff, to 372 m with a 50-person cutoff). By year: 146k (2026), 174k, 204k, 235k (2041).
-S3-05 counts every village speaker and receiver as a receiver: about 394k in 2041.
+2041, base values: **147,077 village speakers** reaching **138.2M people (77.2% of the 179.0M rural and peri-urban)**;
+**277,202 receivers** for 41.6M people in hamlets and outside the mapped settlements; 43.7M people in urban centres.
+Range **79k–355k speakers** (voice 889 m with a 300-person cutoff: 72.8%; 372 m with a 50-person cutoff: 81.7%). By
+year: 110k (2026), 122k, 135k, 147k (2041). S3-05 counts every speaker and receiver as a receiver: about 424k in 2041.
+
+The proxy (people spread evenly in each 1 km pixel) had given 235k speakers reaching 54%: real villages are compact,
+so one speaker reaches far more people.
 
 ## Ranger stations derived from the speakers
 
@@ -169,22 +184,23 @@ within an **8-hour trip** (`analysis/data/maintenance_params.json`, all assumpti
 6 h) = **266**). Greedy capacitated cover: open the site that can take the most unassigned speakers, give it the nearest
 ones up to X, repeat; a site can hold more than one station.
 
-Result: **1,037 stations at 736 sites** for 200,752 speakers; **34,239 speakers have no candidate site within 8 h**.
-Those stations reach 58.8% of people by radio or a 1-hour response and cost **$512M over 15 years** on their own, more
-than the $400M cap. The trade table (stations needed):
+Result (GRID3 speakers): **1,061 stations at 931 sites** for 123,664 speakers; **23,413 speakers have no candidate site
+within 8 h**. Every one costed as a full SRR station, they reach 64.7% of people by radio or a 1-hour response and cost
+**$527M over 15 years**. With fewer but more spread-out speakers, reach rather than crew capacity sets the count. The
+trade table (stations needed):
 
 | X | 4 h | 8 h | 24 h |
 | --- | --- | --- | --- |
-| 50 | 3,959 | 4,197 | 4,652 |
-| 100 | 2,213 | 2,223 | 2,354 |
-| 200 | 1,370 | 1,268 | 1,202 |
-| 266 | 1,177 | 1,037 | 920 |
-| 400 | 1,003 | 811 | 639 |
-| 1,000 | 825 | 592 | 311 |
-| 2,000 | 783 | 541 | 220 |
+| 50 | 2,775 | 2,877 | 2,954 |
+| 100 | 1,819 | 1,706 | 1,531 |
+| 200 | 1,389 | 1,180 | 826 |
+| 266 | 1,281 | 1,061 | 654 |
+| 400 | 1,214 | 934 | 480 |
+| 1,000 | 1,139 | 846 | 305 |
+| 2,000 | 1,128 | 815 | 248 |
 
-The S-3 network step uses these stations as the **Speakers** mode of its station slider: with all 1,037 the 15-year
-cost is about $882M; the slider (or the Mix mode) shows the cost-constrained versions side by side, as the team chose.
+The S-3 network step uses these stations as the **Speakers** mode of its station slider: with the station design the 15-year
+cost is about $575M (stations $212M of it); the slider (or the Mix mode) shows the cost-constrained versions side by side, as the team chose.
 Fewer speakers per village (settlement outlines), more speakers per crew, or communities keeping the smaller speakers
 are the levers; Stage 3 and 4 will move all of these numbers.
 
@@ -217,10 +233,10 @@ years, motorbikes 5), and fuel for the motorised share of every round (default h
 motorbikes 0.035 L/km, $1.70/L: estimates). Crew salaries (default $3k a person a year, estimate) are shown, not
 counted (team rule).
 
-**Default design:** X = 653 speakers per station, **434 main stations + 231 waypoint posts, about $269M** (main
-stations about $606k each over 15 years on average; river sites cost most because of boat fuel). With two-container
-buildings instead of the prefab: $237M. With posts off: 640 stations, $344M. The SRR's way of working (2 routine
-visits a speaker, one speaker per trip, no posts) needs about 1,970 stations and $870M.
+**Default design (GRID3 speakers):** X = 679 speakers per station, **360 main stations + 516 waypoint posts, about
+$212M** (main stations about $553k each over 15 years on average; river sites cost most because of boat fuel). With
+two-container buildings, a 12 m mast and a 600 W station speaker: $132M. With posts off: 866 stations, $450M. The SRR's
+way of working (2 routine visits a speaker, one speaker per trip, no posts) needs about 1,540 stations and $686M.
 
 In the S-3 network step, the "Speakers" station mode uses this design: its station line becomes "Ranger stations (N)
 + waypoint posts (M)" at this cost, and the station count follows the design's main stations.

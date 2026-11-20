@@ -38,6 +38,13 @@ step keeping the one before it faintly and animating the links in. Speakers come
 (`site_speakers.py`, hazard-first rollout), stations from the speakers (`stations_from_speakers.py`), and the network
 step uses those stations. Stage 3 (GRID3) replaces the proxy with no page change.
 
+## Stage 3 (part 1) and the station design, 2026-11-20
+
+GRID3 settlements (DRC) replace the speaker proxy: 147k speakers reach 77% of rural and peri-urban people (proxy: 235k,
+54%). New Design step "What's at a station": main stations and waypoint posts, crews and visits, 15-year cost; default
+360 main stations + 516 posts, about $212M (every site a full station: $527M). Next: pilot terrain and canopy profiles,
+other countries' settlements, the crew-rounds animation (team request), then Stages 2, 4, 5, 6.
+
 ## What it is
 
 The SRR page, turned into a **decision workbench** for the System Definition Review: an interactive page that monitors

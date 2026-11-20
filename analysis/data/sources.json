@@ -160,6 +160,10 @@
   "degurba_2020": {
    "title": "UN Statistical Commission (2020), Degree of Urbanisation: a method to delineate cities, urban and rural areas for international comparisons",
    "url": "https://unstats.un.org/unsd/statcom/51st-session/documents/BG-Item3j-Recommendation-E.pdf"
+  },
+  "grid3_cod_v4": {
+   "title": "GRID3 COD Settlement Extents v4.0 (CIESIN / GRID3, 2026), CC BY-SA 4.0: settlement blocks and building counts for the DRC",
+   "url": "https://academiccommons.columbia.edu/doi/10.7916/bb5b-9b79"
   }
  }
 }

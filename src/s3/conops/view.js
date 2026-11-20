@@ -313,15 +313,15 @@ function buildAlerts() {
     el('div', { class: 'co-layers' }, layers.map(([key, label, sw]) => {
       const cb = el('input', { type: 'checkbox' }); cb.checked = L[key];
       cb.addEventListener('change', () => { L[key] = cb.checked; map.drawAlerts(S); });
-      return el('label', { class: 'co-layer' }, cb, el('i', { style: `background:${sw};${key === 'urban' ? 'border:1.5px solid var(--s2)' : ''}` }), el('span', { text: label }), el('small', { text: 'proxy' }));
+      return el('label', { class: 'co-layer' }, cb, el('i', { style: `background:${sw};${key === 'urban' ? 'border:1.5px solid var(--s2)' : ''}` }), el('span', { text: label }), el('small', { text: key === 'hazard' ? 'Why map' : 'GRID3 / proxy' }));
     })),
     el('h3', { class: 'co-h', text: 'How they are placed' }),
-    el('p', { class: 'co-note' }, `A village speaker goes wherever its voice would reach at least ${cv.cutoff_people.base} people (it carries about ${cv.radius_m.base} m at night out of a village into forest). Smaller villages get a $25 receiver, one per ${cv.people_per_receiver} people. Urban centres rely on phones and radio first.`),
+    el('p', { class: 'co-note' }, `Speakers go on real settlements: each one covers the settlement blocks within its voice (about ${cv.radius_m.base} m at night out of a village into forest), placed where they reach the most people still uncovered, down to ${cv.cutoff_people.base} people. Big built-up blocks get several. Hamlets left over get a $25 receiver each; urban centres rely on phones and radio first.`),
     el('p', { class: 'co-note' }, el('b', { text: 'Informed by the Why map: ' }), `speakers roll out first where people and hazards meet (people heard × (1 + hazard score: conflict, fire and floods, equal weights)). The first tenth of the rollout sits at ${fmt((cv.rollout.first_tenth_mean_hazard / cv.rollout.all_mean_hazard) * 100 - 100)}% higher hazard than the average speaker.`),
     el('div', { class: 'co-explain' },
       el('button', { class: 'v2-link', 'data-co-step': 'hear', text: 'Who must hear it? →' }),
       el('button', { class: 'v2-link', 'data-co-step': 'sound', text: 'How far a voice carries →' })),
-    el('p', { class: 'co-note' }, tag('Modeled proxy', 'proxy'), ' People are spread evenly within each 1 km cell of WorldPop. Settlement outlines (GRID3, Stage 3) replace this: they will merge many of these speakers into one per village.'),
+    el('p', { class: 'co-note' }, tag('Sourced', 'baseline'), ' DRC (76% of the basin\'s people): GRID3 Settlement Extents v4.0, 1.07M blocks, people per block from WorldPop by building count. ', tag('Modeled proxy', 'proxy'), ' Elsewhere: people spread evenly in each 1 km WorldPop cell until those countries\' settlement data is added.'),
     el('p', { class: 'co-hint' }, 'Press ', el('kbd', { text: '→' }), ' for the ranger stations these speakers need.'),
   );
   hudAlerts.replaceChildren(
@@ -560,7 +560,7 @@ function renderLegend() {
   }
   if (S.step === 'alerts' || S.step === 'stations') {
     const item = (sw, text) => el('span', { class: 'co-lg is-fixed' }, el('i', { class: 'co-sw', style: sw }), text);
-    $('.co-legend').replaceChildren(el('div', { class: 'co-lgroup' }, el('b', { text: S.step === 'alerts' ? 'Alerts (modeled proxy)' : 'Stations from speakers' }),
+    $('.co-legend').replaceChildren(el('div', { class: 'co-lgroup' }, el('b', { text: S.step === 'alerts' ? 'Alerts (GRID3 in the DRC)' : 'Stations from speakers' }),
       ...(S.step === 'alerts'
         ? [item('background:linear-gradient(90deg,color-mix(in srgb,var(--gold) 25%,transparent),var(--gold))', 'Village speakers per area'), item('background:var(--river);border-radius:50%;opacity:.6', 'Receivers'), item('border:1.5px solid var(--s2)', 'Urban centre'), item('background:var(--rust-hi);opacity:.4', 'Hazard score')]
         : [item('background:var(--text)', 'Station (shape = access)'), item('background:var(--text);height:2px', 'Speaker area → its station'), item('border:1.5px solid var(--muted)', 'SRR station'), item('background:var(--gold);border-radius:50%;opacity:.4', 'Speakers (faint)')])));

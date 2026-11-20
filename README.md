@@ -153,6 +153,7 @@ map, the number of database nodes is set with buttons; moving a node to another 
 | Population | WorldPop 2020, 1 km, UN-adjusted (CC BY 4.0), projected with UN growth |
 | Protected areas | UNEP-WCMC and IUCN, WDPA, October 2026 (**non-commercial use only**; cited on the page) |
 | Today's network reach | **Modeled proxy**: a radius around each of 260 towns (GeoNames), by size; not measured coverage |
+| Settlements (DRC) | GRID3 COD Settlement Extents v4.0 (CIESIN / GRID3, CC BY-SA 4.0): speakers sit on real villages; outside the DRC a WorldPop **modeled proxy** |
 | Conflict | UCDP Georeferenced Event Dataset v25.1, 2015–2024 (CC BY 4.0) |
 | Fire | NASA FIRMS MODIS C6.1 active fires, 2024, DR Congo |
 | Floods | GDACS flood alerts since 2000 (EC JRC) |

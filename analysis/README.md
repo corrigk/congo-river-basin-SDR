@@ -14,6 +14,7 @@ LEO revisit, sensors, comms options and the 15-year budget. Scripts in `scripts/
 | Basin outline | already in the repo | `../src/data/basin.json` (HydroSHEDS HydroBASINS) |
 | Conflict events (UCDP GED v25.1, CC BY 4.0) | `raw/hazards/ucdp/ged251-csv.zip` | `https://ucdp.uu.se/downloads/ged/ged251-csv.zip` (29 MB) |
 | Active fires 2024, DR Congo (NASA FIRMS MODIS) | `raw/hazards/firms/` | `https://firms.modaps.eosdis.nasa.gov/data/country/modis/2024/modis_2024_Democratic_Republic_of_the_Congo.csv` (41 MB) |
+| GRID3 COD Settlement Extents v4.0 (CC BY-SA 4.0) | `raw/grid3/grid3_cod_settlement_extents_v4.gpkg` (912 MB) | `https://academiccommons.columbia.edu/doi/10.7916/n7b2-jd56/download` (DOI 10.7916/bb5b-9b79) |
 | Flood alerts (GDACS, EC JRC) | `raw/hazards/gdacs/FL_<country>.json` | GDACS event-list API, one request per basin country (small; the service often times out, so retry) |
 
 ## Run it
@@ -35,7 +36,8 @@ $PY scripts/leo_revisit.py
 $PY scripts/build_sensors_comms_budget.py                 # uses the WDPA polygons when raw/wdpa has them
 $PY -I scripts/build_hazards.py                           # conflict, fire and flood layers for the ConOps 'why' map
 $PY -I scripts/build_urbanisation.py                      # urban centres / peri-urban / rural (Degree of Urbanisation) for the Design tab
-$PY scripts/site_speakers.py                              # village speakers and receivers (modeled proxy until GRID3), hazard-first rollout
+$PY scripts/build_settlements.py                          # GRID3 DRC settlement blocks -> raw/grid3/blocks.npz (needs the GeoPackage below)
+$PY scripts/site_speakers.py                              # village speakers and receivers on real settlements (DRC), proxy elsewhere; hazard-first rollout
 $PY scripts/stations_from_speakers.py                     # ranger stations derived from the speakers (X per station, 8 h trips)
 ```
 

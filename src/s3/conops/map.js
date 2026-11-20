@@ -442,7 +442,7 @@ export function createConopsMap(holder, opts = {}) {
       if (G.cov.urbanCells.has(k)) nodes.push(kv('Urban centre', 'phones and radio first'));
       nodes.push(kv('Hazard score', `${fmt(C.hazard[k] * 100)} / 100`));
       if (S.step === 'stations' && C.t1[k]) nodes.push(kv('Looked after by', o === 65535 ? 'no station within 8 h' : `station #${o + 1}`));
-      nodes.push(el('div', { class: 'k', text: 'Modeled proxy until settlement data (Stage 3)' }));
+      nodes.push(el('div', { class: 'k', text: C.grid3?.[k] ? 'GRID3 settlements (DRC)' : 'Modeled proxy (outside the DRC, until its settlement data)' }));
     }
     else if (S.step === 'why') {
       const fire = G.hz.fires.cells[i], con = G.hz.conflict.cells[i];
@@ -477,7 +477,7 @@ export function createConopsMap(holder, opts = {}) {
     describe(R) {
       const cv = G.cov;
       wrap.setAttribute('aria-label', S.step === 'alerts'
-        ? `Map of village speakers and receivers (modeled proxy): ${fmt(cv.by_year[cv.year].t1)} speakers where people cluster, placed first where hazards are highest, ${fmt(cv.by_year[cv.year].t2)} receivers for smaller villages, urban centres reached by phones first.`
+        ? `Map of village speakers and receivers (GRID3 settlements in the DRC, a modeled proxy elsewhere): ${fmt(cv.by_year[cv.year].t1)} speakers where people cluster, placed first where hazards are highest, ${fmt(cv.by_year[cv.year].t2)} receivers for smaller villages, urban centres reached by phones first.`
         : S.step === 'kit'
         ? `Map of the station design: ${fmt(S.kitPlan?.nMain ?? 0)} main ranger stations and ${fmt(S.kitPlan?.nPosts ?? 0)} waypoint posts that crews stop at on their rounds.`
         : S.step === 'stations'
