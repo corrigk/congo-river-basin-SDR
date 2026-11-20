@@ -99,7 +99,9 @@ def main():
         sweep[str(h)] = []
         for x in xs:
             st_, _, un = derive(t1, x, h * 60)
-            sweep[str(h)].append({"X": x, "stations": len(st_), "unassigned": int(round(un))})
+            took = sum(c for _, c, _, _ in st_)
+            sweep[str(h)].append({"X": x, "stations": len(st_), "sites": len({k for k, *_ in st_}), "unassigned": int(round(un)),
+                                  "mean_trip_h": round(sum(c * mn for _, c, _, mn in st_) / max(took, 1) / 60, 2)})
         print(f"T_maint {h} h:", [(r["X"], r["stations"], r["unassigned"]) for r in sweep[str(h)]])
 
     order_cells = [k for k, *_ in stations]

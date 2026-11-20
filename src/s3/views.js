@@ -33,7 +33,7 @@ export function sourcesPanel() {
 // ---------- help ----------
 export function helpView() {
   const rows = [
-    ['1 – 3', 'Research · Design · Trades'], ['→ &nbsp;PgDn &nbsp;Space', 'Next step: Why → Today → Speakers & receivers → Ranger stations → S-3 network (clickers work)'], ['← &nbsp;PgUp', 'Previous step'],
+    ['1 – 3', 'Research · Design · Trades'], ['→ &nbsp;PgDn &nbsp;Space', 'Next step: Why → Today → Speakers & receivers → Ranger stations → What\'s at a station → S-3 network (clickers work)'], ['← &nbsp;PgUp', 'Previous step'],
     ['P', 'Presenter mode'], ['H', 'Slide mode: hide the top bar for screenshots'], ['L', 'Light / dark theme'], ['S', 'Sources'], ['F', 'Fullscreen'],
     ['Esc', 'Close panel'], ['?', 'This help'],
   ];

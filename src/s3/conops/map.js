@@ -232,11 +232,21 @@ export function createConopsMap(holder, opts = {}) {
       cs.strokeStyle = css('--muted'); cs.lineWidth = 1.2;
       for (const s of G.cov.srr) { const [x, y] = px(s.lon, s.lat); shape(cs, s.type, x, y, 4.4); cs.stroke(); }
     }
-    const text = css('--text'), edge = css('--bg');
-    for (let i = 0; i < nShow; i++) {
+    const text = css('--text'), edge = css('--bg'), kit = S.step === 'kit' || S.step === 'what' ? S.kitPlan : null;
+    // In the station-design step the first nMain sites are main stations and the next nPosts become waypoint posts.
+    const nMain = kit ? kit.nMain : nShow, nPosts = kit ? kit.nPosts : 0;
+    if (kit) {
+      cs.strokeStyle = css('--s5'); cs.lineWidth = 1.3;
+      for (let i = nMain; i < Math.min(st.list.length, nMain + nPosts); i++) {
+        const [lon, lat] = st.list[i], [x, y] = px(lon, lat);
+        shape(cs, 'remote', x, y, 2.6); cs.stroke();
+        h.push({ x, y, r: 5, tip: () => [el('b', { text: 'Waypoint post' }), el('div', { text: 'Mast, small solar, relay radio, locked shelter: crews stop here on longer rounds' }), el('div', { class: 'k', text: 'Station design step' })] });
+      }
+    }
+    for (let i = 0; i < Math.min(nShow, nMain); i++) {
       const [lon, lat, type, nsp, maxH, meanH] = st.list[i], [x, y] = px(lon, lat), r = 2.2 + Math.min(2.6, nsp / 120);
       shape(cs, type, x, y, r); cs.fillStyle = text; cs.fill(); cs.strokeStyle = edge; cs.lineWidth = 1; cs.stroke();
-      h.push({ x, y, r: Math.max(5, r + 2), tip: () => [el('b', { text: `Ranger station #${i + 1} · ${type} access` }), kv('Village speakers it looks after', fmt(nsp)), kv('Longest trip', `${fmt(maxH, 1)} h`), kv('Average trip', `${fmt(meanH, 1)} h`), el('div', { class: 'k', text: 'Derived from the speakers (modeled proxy)' })] });
+      h.push({ x, y, r: Math.max(5, r + 2), tip: () => [el('b', { text: `Ranger station #${i + 1} · ${type} access` }), kit ? null : kv('Village speakers it looks after', fmt(nsp)), kit ? null : kv('Longest trip', `${fmt(maxH, 1)} h`), kit ? null : kv('Average trip', `${fmt(meanH, 1)} h`), el('div', { class: 'k', text: kit ? 'Main station (station design step)' : 'Derived from the speakers (modeled proxy)' })].filter(Boolean) });
     }
   }
   // Animate the new step's layer in. A timer, not animation frames, so it also finishes in a background tab.
@@ -468,6 +478,8 @@ export function createConopsMap(holder, opts = {}) {
       const cv = G.cov;
       wrap.setAttribute('aria-label', S.step === 'alerts'
         ? `Map of village speakers and receivers (modeled proxy): ${fmt(cv.by_year[cv.year].t1)} speakers where people cluster, placed first where hazards are highest, ${fmt(cv.by_year[cv.year].t2)} receivers for smaller villages, urban centres reached by phones first.`
+        : S.step === 'kit'
+        ? `Map of the station design: ${fmt(S.kitPlan?.nMain ?? 0)} main ranger stations and ${fmt(S.kitPlan?.nPosts ?? 0)} waypoint posts that crews stop at on their rounds.`
         : S.step === 'stations'
         ? `Map of ${fmt(cv.stations.list.length)} ranger stations derived from the speakers, each looking after up to ${cv.stations.X} speakers within ${cv.stations.T_maint_h} hours, with lines from each speaker area to its station; the SRR's ${cv.stations.compare.srr_sweet_spot} stations for comparison.`
         : S.step === 'today'

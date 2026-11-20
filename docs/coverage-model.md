@@ -14,6 +14,7 @@ before it faintly on the map and animates the new layer in, so the links are vis
 | Today | `#research/today` | | Who existing networks reach (modeled proxy) |
 | Speakers & receivers | `#design` | People (where they cluster) and the Why map's hazards (rollout order) | Village speakers, receivers, urban centres; speakers fade in hazard-first |
 | Ranger stations | `#design/stations` | The speakers: each station looks after up to X within an 8-hour trip | Stations, each speaker area wired to its station, the SRR's 78 for comparison; crew-hours calculator |
+| What's at a station | `#design/kit` | The stations and the speakers they look after | Main stations and waypoint posts on the map; the station's parts, comms, power, crews, visits and 15-year cost |
 | S-3 network | `#design/network` | The speaker-driven stations ("Speakers" mode of the station slider) | Satellites, GEO footprint, hubs, data flow (stations ↔ nodes ↔ hub, alerts down), checks and cost |
 | Who must hear it · How far a voice carries | `#design/hear`, `#design/sound` | | Explainers, opened from the speakers step |
 
@@ -186,3 +187,42 @@ The S-3 network step uses these stations as the **Speakers** mode of its station
 cost is about $882M; the slider (or the Mix mode) shows the cost-constrained versions side by side, as the team chose.
 Fewer speakers per village (settlement outlines), more speakers per crew, or communities keeping the smaller speakers
 are the levers; Stage 3 and 4 will move all of these numbers.
+
+## What's at a station: the station design (`#design/kit`)
+
+`src/s3/coverage/stationkit.js`, catalog `analysis/data/station_kit.json` (every figure labelled srr, published or
+estimate). The SRR costed every site as a full station ($444–646k over 15 years each, so the 1,037 derived sites came
+to $512M). Most of those sites only exist to service nearby speakers, so the design has two kinds of site:
+
+- **Main station**: building (prefab / containers / shared), tower (30 / 24 / 12 m), station loudspeaker (3.2 kW /
+  600 W / none), radios (VHF repeater + handhelds / handhelds), backhaul (Starlink about 100 down / 15 up Mbps, VHF-sat
+  10 / 2, or the S-3 terminal only), the S-3 responder terminal, the medical and spares kit, and solar plus LiFePO4
+  sized to the loads (same method as the Trades physics). Crews (default 2 × 3 people) with a boat at river sites or
+  motorbikes elsewhere.
+- **Waypoint post**: 15 m mast, small solar, relay radio, locked shelter for spares and an overnight stop (about $16.5k,
+  estimate). With posts, crews run circuits of up to 24 h instead of 8-hour day trips, and a circuit three times
+  longer strings three times the stops (assumption, adjustable through "speakers per round").
+
+**Capacity:** X = crews × crew hours a year ÷ (visits per speaker a year × (hours on site + 2 × one-way trip ÷
+speakers per round)). The one-way trip comes from the speaker-to-station derivation at that X (a few fixed-point
+steps); visits = routine (default 1 a year) + repairs (0.3 a year: with health telemetry crews go on a fault).
+
+**How many:** main stations = the derivation's station count at this X for 24 h circuits (posts on) or 8 h day trips;
+posts = the day-trip count minus the circuit count (the stations that circuits replace), placed at the remaining
+derived sites. Main stations take the first sites of the derivation order (an approximation for X other than 266).
+
+**Cost, 15 years:** parts and vehicles × the site's logistics multiplier (road 1.15, river 1.3, remote 1.6), plus 6%
+of capex a year maintenance, backhaul subscription and rent, battery swaps (8 years), vehicle replacement (boat 6
+years, motorbikes 5), and fuel for the motorised share of every round (default half the trip time; boat 0.6 L/km, two
+motorbikes 0.035 L/km, $1.70/L: estimates). Crew salaries (default $3k a person a year, estimate) are shown, not
+counted (team rule).
+
+**Default design:** X = 653 speakers per station, **434 main stations + 231 waypoint posts, about $269M** (main
+stations about $606k each over 15 years on average; river sites cost most because of boat fuel). With two-container
+buildings instead of the prefab: $237M. With posts off: 640 stations, $344M. The SRR's way of working (2 routine
+visits a speaker, one speaker per trip, no posts) needs about 1,970 stations and $870M.
+
+In the S-3 network step, the "Speakers" station mode uses this design: its station line becomes "Ranger stations (N)
++ waypoint posts (M)" at this cost, and the station count follows the design's main stations.
+
+Later: an animation of a crew's rounds through the forest over a week, a month and a year (team request).

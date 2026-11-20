@@ -236,12 +236,13 @@ export function evaluate(D, yearData, opts) {
   const stHi = sc.reduce((a, x) => a + (x.range?.[1] ?? x.usd), 0) / sc.reduce((a, x) => a + x.usd, 0);
   const rivers = stationsAll.filter(s => s.type === 'river').length;
   const hydroDelta = opts.hydro ? (-rivers * yearData.hydro_river_station_15yr.saving_vs_solar_per_station) / 1e6 : 0;
-  const stationBase = (last ? last.cum_cost_musd : 0) + hydroDelta;
+  // A station design (Design tab, "What's at a station") can replace the SRR station cost: opts.stationCost(stations) in $M.
+  const stationBase = opts.stationCost ? opts.stationCost(stationsAll) : (last ? last.cum_cost_musd : 0) + hydroDelta;
   const receivers = D.sn.community_receivers[String(opts.year)].receivers;
   const lines = [
     { k: 'leo', name: `LEO IoT constellation (${opts.leoSats} sats)`, ...range3(lccLeo(opts.leoSats) * (1 + A.leo.replenish) + A.leo.opsMusdYr * A.life, A.leo.range) },
     opts.geo ? { k: 'geo', name: 'GEO broadcast payload', low: A.geo.range[0], base: A.geo.musd, high: A.geo.range[1] } : null,
-    { k: 'stations', name: `Ranger stations (${opts.n})`, ...range3(stationBase, [stLo, stHi]) },
+    { k: 'stations', name: opts.stationLabel || `Ranger stations (${opts.n})`, ...range3(stationBase, [stLo, stHi]) },
     opts.repeaters ? { k: 'repeaters', name: `Canopy repeaters (${opts.repeaters})`, low: opts.repeaters * A.repeater.range[0], base: opts.repeaters * A.repeater.musd15, high: opts.repeaters * A.repeater.range[1] } : null,
     { k: 'db', name: `Hub + ${k - 1} regional database${k - 1 === 1 ? '' : 's'}`, low: A.db.hubRange[0] + (k - 1) * A.db.nodeRange[0], base: A.db.hubMusd + (k - 1) * A.db.nodeMusd, high: A.db.hubRange[1] + (k - 1) * A.db.nodeRange[1] },
     { k: 'receivers', name: `Community receivers (${Math.round(receivers / 1000)}k)`, low: receivers * 10 / 1e6, base: receivers * 25 / 1e6, high: receivers * 25 * A.receiver.high / 1e6 },
