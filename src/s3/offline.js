@@ -11,8 +11,8 @@ export function createOffline(badge) {
     badge.dataset.state = state;
     text.textContent = label;
     badge.disabled = !['partial', 'error'].includes(state);
-    badge.title = state === 'ready' ? 'Everything, including the 3D globe, is cached on this computer'
-      : state === 'partial' ? 'The page works offline; click to also cache the 3D globe (about 7 MB)' : label;
+    badge.title = state === 'ready' ? 'The whole site is cached on this computer and works offline'
+      : state === 'partial' ? 'Part of the site is cached; click to cache the rest' : label;
   };
 
   // status() resolves to { core, globe } (what is cached), or null where there is no offline cache.

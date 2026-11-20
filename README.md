@@ -18,45 +18,45 @@ of `docs/brief-v2.md`). Everything else carries a visible label on the page: **A
 
 ## Tabs
 
-| Key | Tab | What it shows |
-| --- | --- | --- |
-| 1 | **ConOps** | One map in three steps. **Why**: population density, conflict (UCDP), fire (NASA FIRMS), floods (GDACS), protected areas and existing infrastructure, with sourced figures. **Today** (→): the same map without S-3: who existing networks reach (a modeled proxy around the towns we hold) and the RFP's figures (3–7 days for field data, 62% with no warning, 13–15 river gauges). **With S-3 · where · how many** (→): the same map with the design: people within a station's reach, ranger stations and their reach, canopy repeaters, sensors, database nodes, the GEO alert footprint. Sliders and toggles (year, stations with the sweet-spot band, repeaters, raised antennas, database nodes, LEO size, GEO, Starlink, hydro, sensors per type, failure cases) drive live **requirement checks** (S3-01 to S3-10 and the $400M cap), the counts, and the **15-year cost range**; a **vs Today** tab says by how much the design improves each of today's numbers |
-| 2 | **Function flow** | The team's nine blocks: Acquire, Transmit, Process, Evaluate, Generate, Broadcast, Receive, Verify (a "No" loops back to Broadcast), and Coordinate (persistent). Each block's steps, performers and traceability; the latency budgets; and **Play**: the click-through scenarios on the globe or ground view (A flood warning chain, B routine collection, C degraded operations, D non-flood hazard), with an F1–F9 strip lighting each step's blocks |
-| 3 | **Requirements** | Mission & gap, the ten Level 0 requirements (threshold / objective), and the decomposition MO → L4 |
-| 4 | **SDR** | The decision workbench for the System Definition Review: configure the system with catalog equipment (sourced, labelled options for every element), see the 15-year cost by year, requirement margins and failure cases, weigh designs with team weights (winner map, flip points, robustness, decision log), search the design space (Pareto cloud), and test sensitivity (tornado, elasticity, Monte Carlo). **Present ▸** turns the design into a seven-slide deck with live takeaways; every chart exports as PNG or SVG. See [docs/sdr-workbench.md](docs/sdr-workbench.md) |
+| Tab | What it shows |
+| --- | --- |
+| **Research** (front page) | Where things happen and what exists. **Why**: population density, conflict (UCDP), fire (NASA FIRMS), floods (GDACS), protected areas and existing infrastructure, with sourced figures. **Today** (→): the same map without S-3: who existing networks reach (a modeled proxy around the towns we hold) and the RFP's figures (3–7 days for field data, 62% with no warning, 13–15 river gauges). Coming next (brief v3): the existing-infrastructure map (power, roads, rivers, cell sites, mountable structures) and the gap table |
+| **Design** | What S-3 builds, where, and how many: people within a station's reach, ranger stations, canopy repeaters, sensors, database nodes, the GEO alert footprint; sliders and toggles drive live **requirement checks** (S3-01 to S3-10 and the $400M cap), counts and the cost range; a **vs Today** tab. Coming next (brief v3): speakers, stations from speakers, ranger reach and the sensor risk map |
+| **Trades** | The decision workbench. It opens on the **bare minimum**: the cheapest design that meets every requirement (`designs/bare-minimum.json`, found by `node scripts/bare-minimum.mjs`), which every other design is compared against. Configure the system with catalog equipment (sourced, labelled options for every element), link budgets and power sizing, the 15-year cost by year, requirement margins and failure cases, team-weighted ranking (winner map, flip points, robustness, decision log), the design-space search (Pareto cloud) and sensitivity (tornado, elasticity, Monte Carlo). **Present ▸** turns a design into a seven-slide deck; every chart exports as PNG or SVG. See [docs/sdr-workbench.md](docs/sdr-workbench.md) |
 
-How the ConOps numbers are worked out (coverage, latency, capacity, availability, cost range, the sweet spot) is in
-[docs/conops-model.md](docs/conops-model.md). Every chart has a **Table** button.
+The requirements themselves are on the team's [requirements site](https://corrigk.github.io/congo-srr-requirements/)
+(**Requirements ↗** in the top bar). The RFP's Level 0 requirements still drive every check on this site
+(`src/s3/content.js`).
+
+**Staff costs** are left out of the 15-year total, as in the SRR (team rule). The Trades tab shows them on their own
+line and has a switch to count them.
 
 ## Presenting
 
 | Key | Action |
 | --- | --- |
-| 1 – 4 | ConOps · Function flow · Requirements · SDR |
-| → · PgDn · Space | ConOps: Why → Today → With S-3. Scenario: next step (clickers work) |
-| ← · PgUp | ConOps: back to Why. Scenario: previous step |
-| R | Reset the scenario to step 1 |
-| Esc | Close panel; in a scenario, back to Function flow |
-| T | Threshold / objective values everywhere |
-| M · G · O | Next map (globe · ground · schematic) · ground view · satellite pass / fixed |
+| 1 – 3 | Research · Design · Trades |
+| → · PgDn · Space | Next step: Why → Today → Design (clickers work); in a Trades deck, next slide |
+| ← · PgUp | Previous step or slide |
 | P | Presenter mode: larger type, higher contrast, no keyboard hints (remembered) |
 | H | Slide mode: hides the top bar so the page fills the screen for a screenshot (H again, or the corner button, to undo) |
 | L | Light / dark theme (follows the system setting until you pick one; remembered) |
 | S | Sources drawer |
 | F · ? | Fullscreen · shortcuts |
+| Esc | Close a panel; leave a Trades deck |
 
-**Deep links** open a view directly, so a slide can link straight to it: `…/#conops`, `…/#conops/today`, `…/#conops/what`,
-`…/#flow/F8`, `…/#scenario/A/5`, `…/#sdr`, `…/#sdr/present/3`, `…/#requirements`, `…/#overview`, `…/#decomposition`. Add `?present` for presenter
-mode, `?slide` for slide mode and `?offline` to skip the online satellite imagery. Laid out for 1280×720 and up (also
-1024 px and phone width).
+**Deep links** open a view directly, so a slide can link straight to it: `…/#research`, `…/#research/today`,
+`…/#design`, `…/#trades`, `…/#trades/present/3`. SRR-era links still land (`#conops…` → Research or Design,
+`#sdr…` → Trades). Add `?present` for presenter mode and `?slide` for slide mode. Laid out for 1280×720 and up
+(also 1024 px and phone width).
 
 **Screenshots for slides:** open the view, press **F** (fullscreen) and **H** (slide mode), then take the screenshot.
 On a 1920×1080 or 1280×720 screen the result is 16:9.
 
 **Before presenting on a computer you don't control:** open the page once and wait for the badge in the top bar to
-read **Ready offline** (about 30 seconds on slow Wi-Fi; or click **Preload for offline**). After that everything,
-including the 3D globe, works with no network. If anything goes wrong, `sdr-offline.html` is one file with the whole
-page inside (about 4 MB): copy it to a USB stick and double-click it (schematic map only).
+read **Ready offline** (a few seconds; about 3.5 MB). After that every tab works with no network. If anything goes
+wrong, `sdr-offline.html` is one file with the whole page inside (about 3.7 MB): copy it to a USB stick and
+double-click it (the Trades optimizer and Monte Carlo need the online or served page: they run in a worker file).
 
 ## Run it locally
 
@@ -73,7 +73,6 @@ Production build and a local copy of the GitHub Pages setup:
 npm run build          # dist/ (site + sw.js) and sdr-offline.html
 npm run serve          # http://localhost:4180/congo-river-basin-SDR/
 node scripts/serve.mjs --port 4181 --kbps 400 --latency 400   # imitate bad Wi-Fi
-node scripts/serve.mjs --port 4182 --block globemap            # imitate the globe failing to load
 ```
 
 Stop the server to imitate "network gone". Use a new port for a clean test: each port is its own origin with its own
@@ -82,7 +81,7 @@ offline cache. Opening `dist/index.html` from disk does not work (browsers block
 
 ## Rerun the analysis pipeline
 
-The numbers on the ConOps and Function flow tabs come from the Python pipeline in `analysis/` (inputs, commands,
+The numbers on the Research and Design tabs come from the Python pipeline in `analysis/` (inputs, commands,
 the hazard downloads and the real-data rerun notes are in [analysis/README.md](analysis/README.md)). After a rerun,
 rebuild the files the page loads and check the model:
 
@@ -90,75 +89,58 @@ rebuild the files the page loads and check the model:
 npm run data:page                  # analysis/data -> src/s3/v2/data (core, geo, grid, pop-<year>, stations-<year>, hazards)
 node scripts/conops-report.mjs     # the ConOps model on the new data: baseline, levers, failure cases, sweet spot
 node scripts/sdr-report.mjs --opt  # the SDR engine: baseline, each catalog option, the optimizer's best designs
+node scripts/bare-minimum.mjs      # re-find the bare-minimum design (about 2 min) -> designs/bare-minimum.json
 ```
 
 The page loads only the files a view needs, so the first paint stays small. The station slider defaults to the sweet
 spot of the chosen year. Commit both `analysis/data` and `src/s3/v2/data`, and update the figures quoted in
 `docs/conops-model.md` from the report.
 
-## Edit functions and requirements
+## Edit assumptions and requirements
 
-- **Functional flow (F1–F9)**: `analysis/data/functions.json`: the nine blocks with their names, steps, performers,
-  inputs and outputs, traceability and latency allocation; F8's `decision` (the "No" loop back to F6) and F9's
-  `persistent` flag. `latency_budgets` sets which blocks make up S3-03 and S3-05. Run `npm run data:page` afterwards.
-- **ConOps assumptions**: `src/s3/conops/model.js` (`ASSUME`: relay reach, canopy shares, satellite capacity, unit
-  costs and ranges). The page and `scripts/conops-report.mjs` both read it.
-- **Level 0 requirements, objectives, gap facts, constraints, TBR list**: `src/s3/content.js`, the single source of
-  truth for every RFP number on the page. Copy text exactly from the RFP.
-- **Scenarios**: `src/s3/scenarios.json`. Each step has `title`, `text`, `fn` (the F1–F9 blocks it exercises),
-  `reqs`, `mo`, `stages`, `show` and `links` (map nodes and beams), `focus`, and optionally `before`, `state`, `area`,
-  `latency`, `note`. New map points go in `nodes` (`label`, `sub`, `kind`, `at: [lon, lat]`). No rendering code
-  changes are needed.
-- **Decomposition (MO → L4)**: edited in the separate [congo-srr-requirements](https://github.com/corrigk/congo-srr-requirements)
-  repo. This page ships a snapshot (so the tab works offline) and, when online, shows the newer live baseline. After
-  finalizing a baseline there, with both repos side by side: `npm run sync:decomp`, then commit
-  `src/s3/decomp/snapshot.json`.
+- **ConOps assumptions** (Research and Design): `src/s3/conops/model.js` (`ASSUME`: relay reach, canopy shares,
+  satellite capacity, unit costs and ranges). The page and `scripts/conops-report.mjs` both read it.
+- **Equipment, prices and physics** (Trades): `src/sdr/catalog.js` (options, sources, basis labels) and
+  `src/sdr/physics.js` (link budgets, rain, power sizing). Rerun `node scripts/bare-minimum.mjs` after a change that
+  could move the cheapest compliant design.
+- **Level 0 requirements, objectives, gap facts**: `src/s3/content.js`, the single source of truth for every RFP
+  number on the page. Copy text exactly from the RFP. The team's decomposition lives on the requirements site.
 
 ## How the offline cache works
 
-- **First visit.** The page renders from one HTML, one JS and one CSS file plus fonts, with no WebGL or network
-  needed for the ConOps, Function flow and Requirements tabs. The 3D globe (CesiumJS) loads afterwards in the background. All libraries and fonts
-  are self-hosted; nothing loads from a CDN.
+- **First visit.** The page renders from one HTML, one JS and one CSS file plus fonts. All libraries and fonts are
+  self-hosted; nothing loads from a CDN, and nothing needs WebGL.
 - **Service worker** (`dist/sw.js`, generated from `scripts/sw-template.js` by `scripts/sw-plugin.mjs` with the list
   of files the build produced):
-  - on install it caches the **core**: the page, the ConOps and flow code, and all map data for every year,
-    including the hazard layers (about 3.3 MB), so a second visit works offline on every tab;
-  - once the globe has loaded it caches the **globe** files too (about 7.5 MB); **Preload for offline** does the
-    same on demand and shows progress;
+  - on install it caches everything: the page, every tab's code, the Trades worker and all map data for every year
+    (about 3.5 MB), so a second visit works offline on every tab;
   - files are served cache-first; the page itself is served from cache and refreshed in the background, so a new
     deploy shows up on the next reload. A new build (or a change to the worker itself) gets a new cache and the
     old one is deleted;
+  - caches are named `sdr-…`: the SRR site shares the `corrigk.github.io` origin and uses `srr-…`, and each worker
+    deletes only its own, so the two sites never clear each other's offline copy;
   - `sw.js` is never cached: the page fetches it to tell whether the server is reachable at all;
   - only the site itself is answered with the cached page, so `sdr-offline.html` loads as itself.
-- **Badge** (top bar): *Loading…* → *Preload for offline* (page cached, globe not yet) → *Ready offline* (everything).
-- **Partly cached globe.** If the connection drops while the globe is being saved and the server can't be reached,
-  the scenario starts on the schematic map and says "Offline and the globe is not cached" instead of showing an
-  empty globe.
-- **Imagery.** The globe always has Cesium's bundled Natural Earth II basemap. Esri World Imagery is layered on top
-  only after a probe tile loads; Esri tiles are not bulk-cached, to stay within Esri's terms of use.
-- **Other fallbacks.** No WebGL, or the globe fails to load: the schematic map stays, with a short notice.
+- **Badge** (top bar): *Loading…* → *Ready offline*.
 
 ## Themes and accessibility
 
 Dark is the default; light follows the system setting or **L**. Colours are tokens in `src/style.css` (site) and
-`src/s3/v2/v2.css` (charts and map ramps, from the brief's prototype). The map and scenario stage (`.stage`) keep
-dark tokens in both themes. Text meets WCAG AA contrast in both themes; everything works by keyboard (on the ConOps
+`src/s3/v2/v2.css` (charts and map ramps, from the brief's prototype). Text meets WCAG AA contrast in both themes; everything works by keyboard (on the ConOps
 map, the number of database nodes is set with buttons; moving a node to another city is a mouse click); charts have table views and the maps have text descriptions.
 
 ## Code map
 
-- `src/main.js`: state, routing, tabs, keyboard, theme, presenter and slide modes, map switching
-- `src/s3/conops/`: the ConOps tab: `view.js` (layout, controls, results), `map.js` (the two-step map), `model.js`
-  (the formulas behind the checks and the cost range)
-- `src/s3/v2/sections.js`: the Function flow section; `ui.js` (charts, controls), `data.js` (loaders)
-- `src/s3/views.js`: Requirements views, scenario card and panels, Sources drawer, help
-- `src/s3/content.js`: RFP requirements and other fixed text; `src/s3/scenarios.json`: scenarios
-- `src/s3/globemap.js`, `src/globe.js`: 3D globe; `src/s3/groundmap.js`: ground view; `src/s3/schematic.js`: schematic map
-- `src/s3/decomp/`: decomposition tab; `src/s3/offline.js`: service worker registration and the badge
-- `analysis/`: data pipeline (Python); `scripts/`: page data, ConOps report, service worker, test server
-- `docs/conops-model.md`: how the ConOps numbers are worked out
-- `src/sdr/`: the SDR workbench (catalog, engine, decide, optimize, sensitivity, worker, view); `designs/`: preset designs;
-  `scripts/sdr-report.mjs`: the engine in node; `docs/sdr-workbench.md`: how it works
+- `src/main.js`: state, routing, the three tabs and the Research → Design story, keyboard, theme, presenter and slide modes
+- `src/s3/conops/`: the Research and Design map view: `view.js` (layout, controls, results), `map.js` (the stepped
+  map), `model.js` (the formulas behind the checks and the cost range)
+- `src/s3/v2/`: `ui.js` (charts, controls), `data.js` (loaders), `data/` (page data built from `analysis/`)
+- `src/s3/views.js`: Sources drawer and help; `src/s3/content.js`: RFP requirements and other fixed text;
+  `src/s3/offline.js`: service worker registration and the badge
+- `src/sdr/`: the Trades workbench (catalog, physics, engine, decide, optimize, sensitivity, export, worker, view);
+  `designs/`: preset designs, including the bare minimum
+- `analysis/`: data pipeline (Python); `scripts/`: page data, reports, bare-minimum search, service worker, test server
+- `docs/conops-model.md`, `docs/sdr-workbench.md`: how the numbers are worked out; `docs/sdr-plan.md`: the plan
 
 ## Data and licences
 

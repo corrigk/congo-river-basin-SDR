@@ -198,3 +198,6 @@
 .vtoggle.sd-exp { opacity: .75; }
 .vtoggle.sd-exp:hover { opacity: 1; }
 .sd-slide-body .sd-kpis + .sd-grid2 .vsvg { max-height: 32vh; }
+
+.sd-line.is-x { color: var(--muted); font-style: italic; }
+.sd-line.is-x i { font-style: italic; }

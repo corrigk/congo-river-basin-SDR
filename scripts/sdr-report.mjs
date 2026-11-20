@@ -11,6 +11,7 @@ const ctx = { D: read('core.json'), Y: { 2041: read('stations-2041.json') } };
 const st = r => r.checks.map(c => `${c.id.replace('S3-', '')}:${c.state[0].toUpperCase()}`).join(' ');
 const line = (label, r) => `${label.padEnd(44)} $${Math.round(r.total.base)}M (${Math.round(r.total.low)}-${Math.round(r.total.high)})  IOC yr ${r.ioc}  p95 ${r.metrics.p95Fast.toFixed(1)}m  ${st(r)}`;
 
+// The SRR concept with catalog equipment; the bare minimum (designs/bare-minimum.json) comes from scripts/bare-minimum.mjs.
 const base = DEFAULT_DESIGN();
 const b = evaluateDesign(ctx, base, { withFails: true });
 console.log('== Baseline');

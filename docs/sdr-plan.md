@@ -17,6 +17,14 @@ Markdown summary).
 Not yet: satellite power and mass budgets, spares and reliability models; vendor quotes; the optimizer does not run in `sdr-offline.html`
 (the worker is a separate file).
 
+## Site structure (2026-11-20)
+
+The SDR moved to its own repo (`congo-river-basin-SDR`, copied from the SRR repo's `sdr` branch); the SRR site stays
+frozen. Three tabs, no numbers: **Research** (front page: where things happen, what exists, the gaps), **Design**
+(what S-3 builds; the coverage chain from brief v3 lands here), **Trades** (the workbench, opening on the bare-minimum
+design). Function flow, the scenarios, the 3D globe and the SRR requirement views were removed; requirements live on
+the requirements site. Staff costs are out of the 15-year total by default (team rule) with a switch to count them.
+
 ## What it is
 
 The SRR page, turned into a **decision workbench** for the System Definition Review: an interactive page that monitors

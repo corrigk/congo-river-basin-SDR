@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0A0A0A" />
-  <meta name="description" content="RFP S-3 BASINLINK & BASINCAST: System Definition Review workbench for the Congo River Basin system of systems." />
+  <meta name="description" content="RFP S-3 BASINLINK & BASINCAST: System Definition Review: research, design and trades for the Congo River Basin system of systems." />
   <title>S-3 BASINLINK SDR</title>
   <script>/* theme before first paint: the saved choice, else the system setting (see src/style.css) */
     try { var t = localStorage.getItem('srr-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
@@ -12,9 +12,7 @@
 </head>
 <body>
   <button class="skip" data-act="skip">Skip to content</button>
-  <div id="app" data-view="flow" data-mode="t" data-map="schematic">
-    <div id="map" class="map stage"><div class="map-sch"></div><div class="map-globe" aria-hidden="true"></div><div class="map-ground"></div></div>
-
+  <div id="app" data-view="research">
     <header class="topbar">
       <div class="brand">
         <span class="brand-mark" id="brand-mark"></span>
@@ -25,17 +23,13 @@
       </div>
       <nav class="tabs" role="tablist" aria-label="View">
         <span class="tabs-ink"></span>
-        <button role="tab" id="tab-conops" data-view="conops" aria-controls="view-conops"><span class="t-n">1</span>ConOps</button>
-        <button role="tab" id="tab-flow" data-view="flow" aria-controls="view-flow"><span class="t-n">2</span>Function flow</button>
-        <button role="tab" id="tab-requirements" data-view="requirements" aria-controls="view-requirements"><span class="t-n">3</span>Requirements</button>
-        <button role="tab" id="tab-sdr" data-view="sdr" aria-controls="view-sdr"><span class="t-n">4</span>SDR</button>
+        <button role="tab" id="tab-research" data-view="research" aria-controls="view-conops">Research</button>
+        <button role="tab" id="tab-design" data-view="design" aria-controls="view-conops">Design</button>
+        <button role="tab" id="tab-trades" data-view="trades" aria-controls="view-sdr">Trades</button>
       </nav>
       <div class="top-right">
         <button class="offline" data-act="preload" data-state="loading" aria-live="polite"><i aria-hidden="true"></i><span>Loading…</span></button>
-        <div class="mode" role="group" aria-label="Requirement values (T)">
-          <button data-mode="t" aria-pressed="true">Threshold</button>
-          <button data-mode="o" aria-pressed="false">Objective</button>
-        </div>
+        <a class="top-link" href="https://corrigk.github.io/congo-srr-requirements/" target="_blank" rel="noopener" title="The team's requirements site (opens in a new tab)">Requirements<span aria-hidden="true"> ↗</span><span class="sr-only"> (opens in a new tab)</span></a>
         <span class="divider"></span>
         <button class="icon-btn" data-act="sources" title="Sources (S)" aria-label="Sources" aria-expanded="false" aria-controls="panel"></button>
         <button class="icon-btn" data-act="theme" title="Light / dark (L)" aria-label="Switch to light theme"></button>
@@ -45,27 +39,8 @@
       </div>
     </header>
 
-    <section class="process-view co-view" id="view-conops" role="tabpanel" aria-labelledby="tab-conops"></section>
-    <section class="process-view" id="view-flow" role="tabpanel" aria-labelledby="tab-flow" hidden></section>
-    <section class="process-view sd-view" id="view-sdr" role="tabpanel" aria-labelledby="tab-sdr" hidden></section>
-    <nav class="req-subnav glass" id="req-subnav" aria-label="Requirements views" hidden>
-      <button data-view="overview">Mission &amp; gap</button>
-      <button data-view="requirements">Level 0 (RFP)</button>
-      <button data-view="decomposition">Decomposition (MO → L4)</button>
-    </nav>
-    <section class="process-view" id="view-overview" role="tabpanel" aria-label="Mission and gap" hidden></section>
-    <section class="process-view" id="view-requirements" role="tabpanel" aria-labelledby="tab-requirements" hidden></section>
-    <section class="sc-view stage" id="view-scenario" role="tabpanel" aria-label="Scenario walkthrough" hidden>
-      <aside class="sc-card glass" id="sc-card" aria-label="Scenario steps"></aside>
-      <div class="lt-card glass" id="lt-card" aria-label="Latency budget"></div>
-      <div class="map-switch glass" role="group" aria-label="Map (M)">
-        <button data-map="globe" aria-pressed="false" disabled>Globe</button>
-        <button data-map="ground" aria-pressed="false">Ground</button>
-        <button data-map="schematic" aria-pressed="true">Schematic</button>
-        <span class="map-status" aria-live="polite"></span>
-      </div>
-    </section>
-    <section class="dc-view" id="view-decomposition" role="tabpanel" aria-label="Decomposition" hidden></section>
+    <section class="process-view co-view" id="view-conops" role="tabpanel" aria-labelledby="tab-research"></section>
+    <section class="process-view sd-view" id="view-sdr" role="tabpanel" aria-labelledby="tab-trades" hidden></section>
 
     <aside class="panel glass" id="panel" aria-label="Details"></aside>
     <button class="slide-exit" data-act="slide" hidden>Show the top bar (H)</button>

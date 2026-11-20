@@ -1,6 +1,6 @@
 // Vite plugin: after the build, write dist/sw.js with two precache lists taken from the files actually emitted.
-//   core  = the page, its JS/CSS, fonts (woff2) and the schematic map: cached when the service worker installs.
-//   globe = the lazy globe chunk and the Cesium workers/assets: cached when the globe has loaded, or on "Preload".
+//   core  = the page, its JS/CSS, fonts (woff2) and data: cached when the service worker installs.
+//   globe = empty on the SDR site (no 3D globe); kept so the worker and badge logic stay unchanged.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';

@@ -1,7 +1,7 @@
 {
   "name": "congo-sdr-s3",
   "version": "1.0.0",
-  "description": "RFP S-3 BASINLINK & BASINCAST: System Requirements Review demo page",
+  "description": "RFP S-3 BASINLINK & BASINCAST: System Definition Review site (research, design, trades)",
   "main": "index.js",
   "scripts": {
     "dev": "vite",
@@ -9,24 +9,17 @@
     "build:offline": "vite build --config vite.offline.config.js",
     "preview": "vite preview",
     "serve": "node scripts/serve.mjs",
-    "data": "node scripts/build-data.mjs && node scripts/build-mask.mjs && node scripts/build-extras.mjs && node scripts/build-schematic.mjs",
-    "sync:decomp": "node scripts/sync-decomposition.mjs",
     "data:page": "node scripts/build-page-data.mjs"
   },
   "keywords": [],
   "type": "module",
   "dependencies": {
     "@fontsource/big-shoulders-text": "^5.3.0",
-    "@fontsource/inter": "^5.3.0",
-    "cesium": "^1.145.0",
-    "d3": "7.9.0",
-    "three": "0.180.0"
+    "@fontsource/inter": "^5.3.0"
   },
   "devDependencies": {
     "mapshaper": "^0.7.66",
-    "polygon-clipping": "^0.15.7",
     "vite": "^8.3.0",
-    "vite-plugin-singlefile": "^2.3.3",
-    "vite-plugin-static-copy": "^4.1.1"
+    "vite-plugin-singlefile": "^2.3.3"
   }
 }

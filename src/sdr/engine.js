@@ -216,7 +216,10 @@ export function evaluateDesign(ctx, design, { knobs = {}, fail = null, withFails
     const nr = ASSUME.raised.types.reduce((a, t) => a + (counts[t] || 0), 0);
     add('antennas', `Raised antennas on fixed sensors (${nr.toLocaleString('en-US')})`, 'User', 'estimate', [0.6, 2]).buy(nr * ASSUME.raised.usd, 5);
   }
-  add('staff', `Operations staff (${P.ops.fte} people)`, 'Operations', P.ops.basis, P.ops.range).yearly(P.ops.fte * P.ops.usdPerFteYr * k('opsCost'), 1);
+  // Operations staff: the team rule keeps salaries out of the 15-year total (as in the SRR). design.includeStaff
+  // counts them; either way the staffing choice still weighs on Maintainability, so it is never free in a trade.
+  const staffUsdYr = P.ops.fte * P.ops.usdPerFteYr * k('opsCost');
+  if (design.includeStaff) add('staff', `Operations staff (${P.ops.fte} people)`, 'Operations', P.ops.basis, P.ops.range).yearly(staffUsdYr, 1);
 
   // ----- totals, by year, $M -----
   const r = (design.discountPct || 0) / 100;
@@ -266,10 +269,11 @@ export function evaluateDesign(ctx, design, { knobs = {}, fail = null, withFails
     margin: clamp((Math.min(0.5, tight.margin) + 0.5)),
     risk: clamp(1 - ((riskAvg * 2 + riskMax) / 3 - 1) / 4),
     schedule: clamp((6 - ioc) / 5),
-    maint: clamp(0.6 * (25 - opexYr) / 22 + 0.4 * (1 - sites / 450)),
+    maint: clamp(0.6 * (25 - opexYr - (design.includeStaff ? 0 : staffUsdYr / 1e6)) / 22 + 0.4 * (1 - sites / 450)),
   };
 
   const out = {
+    staff: { name: `Operations staff (${P.ops.fte} people)`, fte: P.ops.fte, perYr: staffUsdYr / 1e6, total15: (staffUsdYr * LIFE) / 1e6, included: !!design.includeStaff },
     design, R, P, own, sats, phys: { ph, uplink: ub, relay, geo: geoL, rain, power, kbps }, lines: lineOut, total, perYear, npv, lcc, capexTotal, opexYr, ioc, driver, lead, checks, compliant, tight, criteria,
     metrics: { ...m, popPct: R.popPct, within30: R.within30, avail: R.avail, terminals, receivers: R.receivers, stations: nSt, repeaters: design.repeaters, dbNodes: dbN, sats, backhaulMbps: have },
   };

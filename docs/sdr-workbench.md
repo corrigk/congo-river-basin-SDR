@@ -1,7 +1,21 @@
 # SDR workbench: how it works
 
-Tab **4 · SDR** (`#sdr`). The SRR tabs (1–3) are unchanged. Code in `src/sdr/`; the same engine runs in node:
+The **Trades** tab (`#trades`) of the SDR site. Code in `src/sdr/`; the same engine runs in node:
 `node scripts/sdr-report.mjs` (baseline, every option swapped in one at a time) and `--opt` (the optimizer).
+
+## The bare minimum
+
+The Trades tab opens on `designs/bare-minimum.json`: the cheapest design that meets every Level 0 requirement and the
+$400M cap. `node scripts/bare-minimum.mjs` finds it with five seeds of the optimizer's "cheapest" search (2,500 samples,
+8 climbs of 160 steps each) and then a one-at-a-time polish over every lever and catalog choice. As of 2026-11-20 it
+costs **$204M** ($159–315M): 18 × 12U satellites on dedicated launches, a leased GEO transponder, $10 receivers, a hub
+plus one regional node, lean staffing, and only **2 ranger stations**, because no Level 0 requirement asks for
+stations. Its tightest margins are S3-03 (5%), S3-09 (7%) and S3-10 (9%). The coverage work (speakers per station)
+will add stations back; rerun the script when it does.
+
+**Staff** are out of the 15-year total by default (team rule), shown on their own line, with a switch to count them.
+The optimizer's "cheapest" search still counts staff at full cost when it compares designs: otherwise it would buy
+availability with a free, larger ops team instead of real equipment.
 
 ## Pieces
 

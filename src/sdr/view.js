@@ -14,7 +14,10 @@ import { LEO_SIZES } from '../s3/conops/model.js';
 import '../s3/v2/v2.css';
 import './sdr.css';
 
-const PRESETS = Object.values(import.meta.glob('../../designs/*.json', { eager: true, import: 'default' }));
+const PRESETS = Object.entries(import.meta.glob('../../designs/*.json', { eager: true, import: 'default' }))
+  .sort(([a], [b]) => (a.includes('bare-minimum') ? -1 : b.includes('bare-minimum') ? 1 : a.localeCompare(b))).map(([, d]) => d);
+// Everyone starts from the bare minimum: the cheapest design that meets every requirement (scripts/bare-minimum.mjs).
+const START = () => structuredClone(PRESETS.find(p => /bare minimum/i.test(p.name)) || DEFAULT_DESIGN());
 const TABS = [['overview', 'Overview'], ['links', 'Links & power'], ['time', 'Cost over time'], ['decide', 'Decide'], ['explore', 'Explore'], ['sens', 'Sensitivity'], ['catalog', 'Catalog']];
 const COLORS = ['--s1', '--s2', '--s4', '--s7', '--s5', '--s3', '--s6'];
 const NAMES = { 'S3-01': 'Coverage', 'S3-02': 'Capacity', 'S3-03': 'Priority ≤30 min', 'S3-04': 'Terminal ≤$150', 'S3-05': 'Alert ≤10 min', 'S3-06': 'Targeting', 'S3-07': 'Receiver ≤$25', 'S3-08': 'Responders', 'S3-09': 'Command ≤6 h', 'S3-10': 'Availability', LCC: 'Cost ≤$400M' };
@@ -23,7 +26,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private window: nothing kept */ } },
 };
 const S = {
-  d: store.get('sdr-design', null) || DEFAULT_DESIGN(), prev: null, tab: 'overview',
+  d: store.get('sdr-design-2', null) || START(), prev: null, tab: 'overview',
   weights: store.get('sdr-weights', { ...DEFAULT_WEIGHTS }), penalty: 0.6, budget: CAP_MUSD, yAxis: 'pop', tOut: 'lcc',
   saved: store.get('sdr-saved', []), compare: store.get('sdr-compare', null), opt: null, mc: null, busy: null, sens: null,
   present: null, // slide index while presenting
@@ -32,7 +35,7 @@ let onSlide = () => {};
 let root = null, ctx = null, R = null, worker = null, jobs = 0;
 const $ = s => root.querySelector(s);
 const fill = (node, ...kids) => node.replaceChildren(...kids.flat(Infinity).filter(k => k != null && k !== false && k !== ''));
-const persist = () => { store.set('sdr-design', S.d); store.set('sdr-weights', S.weights); store.set('sdr-saved', S.saved); store.set('sdr-compare', S.compare); };
+const persist = () => { store.set('sdr-design-2', S.d); store.set('sdr-weights', S.weights); store.set('sdr-saved', S.saved); store.set('sdr-compare', S.compare); };
 const allDesigns = () => [...PRESETS.map(p => ({ ...p, preset: true })), ...S.saved];
 const money = v => (Number.isFinite(v) ? `$${fmt(v, Math.abs(v) < 10 ? 1 : 0)}M` : '–');
 const mins = v => (Number.isFinite(v) ? (v >= 120 ? `${fmt(v / 60, 1)} h` : `${fmt(v, v < 10 ? 1 : 0)} min`) : 'saturated');
@@ -102,7 +105,7 @@ function renderBar() {
     el('button', { class: 'sd-btn', onclick: exportJson, title: 'Download this design as a JSON file (commit it under designs/ to share)', text: 'Export' }),
     el('button', { class: 'sd-btn', onclick: () => importJson.click(), text: 'Import' }), importJson,
     S.prev ? el('button', { class: 'sd-btn', onclick: () => { const p = S.prev; S.prev = S.d; S.d = p; update(); }, text: 'Undo load' }) : null,
-    el('button', { class: 'sd-btn', onclick: () => loadDesign(DEFAULT_DESIGN()), text: 'Reset' }),
+    el('button', { class: 'sd-btn', onclick: () => loadDesign(START()), title: 'Back to the bare-minimum design', text: 'Reset' }),
     el('button', { class: 'sd-btn is-present-btn', onclick: () => goSlide(0), title: 'Present this design as slides (← → to move, Esc to leave)', text: 'Present ▸' }),
     el('span', { class: 'sd-flash', role: 'status' }));
 }
@@ -145,6 +148,7 @@ function renderCfg() {
     segs('Raised antennas on fixed sensors', 'raised', [false, true], v => (v ? 'Yes' : 'No')),
     slider('Sensors (× SRR baseline)', 'sensorScale', 0.5, 4, 0.25, '×'),
     slider('Discount rate (0 = nominal)', 'discountPct', 0, 10, 0.5, '%'),
+    segs('Count operations staff in the 15-year cost', 'includeStaff', [false, true], v => (v ? 'Yes' : 'No (team rule)')),
     Object.entries(groups).map(([g, es]) => [el('h3', { class: 'sd-h', text: g }), es.map(elementBox)]),
     el('details', { class: 'sd-el sd-phys', open: S.openPhys || null, ontoggle: ev => { S.openPhys = ev.target.open; } },
       el('summary', {}, el('span', { class: 'sd-el-n', text: 'Physics assumptions' }), el('span', { class: 'sd-el-v', text: 'Link budgets, rain, power' })),
@@ -343,6 +347,9 @@ function linesCard() {
       el('span', { class: 'sd-line-n', text: l.name }), el('span', {}, btag(l.basis)),
       el('span', { text: money(l.capex) }), el('span', { text: money(l.opex) }), el('span', { text: money(l.repl) }), el('b', { text: money(l.base) }),
       el('span', { class: 'sd-range' }, el('i', { style: `left:${(l.low / max) * 100}%;width:${((l.high - l.low) / max) * 100}%` }), el('em', { style: `left:${(l.base / max) * 100}%` })))),
+    R.staff.included ? null : el('div', { class: 'sd-line is-x', title: 'Salaries are left out of the 15-year total (team rule, as in the SRR). Switch them on under Sizing.' },
+      el('span', { class: 'sd-line-n', text: `${R.staff.name}: not in the total` }), el('span', {}, btag(R.P.ops.basis)),
+      el('span', { text: '' }), el('span', { text: money(R.staff.total15) }), el('span', { text: '' }), el('i', { text: money(R.staff.total15) }), el('span', { class: 'sd-note', text: `$${fmt(R.staff.perYr, 2)}M a year` })),
     el('div', { class: 'sd-line is-t' }, el('span', { text: 'Total' }), el('span'), el('span', { text: money(R.capexTotal) }), el('span', { text: money(R.lines.reduce((a, l) => a + l.opex, 0)) }), el('span', { text: money(R.lines.reduce((a, l) => a + l.repl, 0)) }), el('b', { text: money(R.total.base) }), el('span', { text: `${money(R.total.low)}–${money(R.total.high)}` })));
   return chartBlock('sd-lines', 'Life-cycle cost by line, 15 years', body,
     [['Line', 'Basis', 'Setup $M', 'Running $M', 'Replace $M', '15-yr $M', 'Low', 'High'], ...lines.map(l => [l.name, l.basis, fmt(l.capex, 1), fmt(l.opex, 1), fmt(l.repl, 1), fmt(l.base, 1), fmt(l.low, 1), fmt(l.high, 1)])]);

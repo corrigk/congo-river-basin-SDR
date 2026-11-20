@@ -76,12 +76,12 @@ export async function mount(el_, step = 'why') {
   root.innerHTML = `
     <div class="co" data-step="${S.step}">
       <header class="co-head">
-        <div><div class="pv-eyebrow">ConOps · RFP S-3</div>
+        <div><div class="pv-eyebrow"><span class="co-e-research">Research · where things happen and what exists</span><span class="co-e-design">Design · RFP S-3</span></div>
           <h2 class="co-title"><span class="co-t-why">Why the basin needs S-3</span><span class="co-t-today">Today, without S-3</span><span class="co-t-what">What we build, where, and how many</span></h2></div>
-        <div class="seg co-step" role="group" aria-label="ConOps step (← →)">
+        <div class="seg co-step" role="group" aria-label="Research step (← →)">
           <button data-co-step="why" aria-pressed="${S.step === 'why'}">Why</button>
           <button data-co-step="today" aria-pressed="${S.step === 'today'}">Today</button>
-          <button data-co-step="what" aria-pressed="${S.step === 'what'}">With S-3 · where · how many</button>
+          <button data-co-step="what" aria-pressed="${S.step === 'what'}">Design →</button>
         </div>
       </header>
       <div class="co-body">

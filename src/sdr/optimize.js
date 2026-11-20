@@ -22,7 +22,9 @@ const NUM = {
 export function objective(id, r, { budget = CAP_MUSD, weights = DEFAULT_WEIGHTS, penalty = 0.6 } = {}) {
   const over = Math.max(0, r.lcc - budget);
   switch (id) {
-    case 'cheapest': return r.compliant ? -r.lcc : -1e4 - r.checks.filter(c => !c.ok).length * 1e3 - r.lcc;
+    // The search counts staff at full cost even when the reported total leaves them out (team rule): otherwise it
+    // would buy availability with a free, larger ops team instead of real equipment.
+    case 'cheapest': { const c = r.lcc + (r.staff.included ? 0 : r.staff.total15); return r.compliant ? -c : -1e4 - r.checks.filter(x => !x.ok).length * 1e3 - c; }
     case 'coverage': return over ? -1e4 - over : r.R.popPct + 10 * r.R.fastShare + (r.compliant ? 20 : 0);
     case 'resilient': return over ? -1e4 - over : (r.criteria.resilience ?? 0) * 100 + (r.compliant ? 1000 : 0) - r.lcc / 1000;
     case 'margin': return over ? -1e4 - over : Math.min(0.5, r.tight.margin) * 100 + (r.compliant ? 1000 : 0) - r.lcc / 1000;

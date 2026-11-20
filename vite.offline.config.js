@@ -1,16 +1,12 @@
 // Single-file offline backup: the whole page (code, data, fonts) inlined into one HTML file that opens by
-// double-click with no server or network. Schematic map only (see src/s3/globemap-none.js).
+// double-click with no server or network.
 //   npm run build:offline  ->  sdr-offline.html (and dist/sdr-offline.html when dist exists)
 import { defineConfig } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
-import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 
 export default defineConfig({
   base: './',
-  resolve: {
-    alias: [{ find: /^\.\/s3\/globemap\.js$/, replacement: fileURLToPath(new URL('./src/s3/globemap-none.js', import.meta.url)) }],
-  },
   plugins: [
     viteSingleFile(),
     {
