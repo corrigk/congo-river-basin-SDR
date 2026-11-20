@@ -21,7 +21,7 @@ of `docs/brief-v2.md`). Everything else carries a visible label on the page: **A
 | Tab | What it shows |
 | --- | --- |
 | **Research** (front page) | Where things happen and what exists. **Why**: population density, conflict (UCDP), fire (NASA FIRMS), floods (GDACS), protected areas and existing infrastructure, with sourced figures. **Today** (→): the same map without S-3: who existing networks reach (a modeled proxy around the towns we hold) and the RFP's figures (3–7 days for field data, 62% with no warning, 13–15 river gauges). Coming next (brief v3): the existing-infrastructure map (power, roads, rivers, cell sites, mountable structures) and the gap table |
-| **Design** | What S-3 builds, where, and how many: people within a station's reach, ranger stations, canopy repeaters, sensors, database nodes, the GEO alert footprint; sliders and toggles drive live **requirement checks** (S3-01 to S3-10 and the $400M cap), counts and the cost range; a **vs Today** tab. Coming next (brief v3): speakers, stations from speakers, ranger reach and the sensor risk map |
+| **Design** | **S-3 system**: what S-3 builds, where, and how many: people within a station's reach, ranger stations, canopy repeaters, sensors, database nodes, the GEO alert footprint; sliders and toggles drive live **requirement checks** (S3-01 to S3-10 and the $400M cap), counts and the cost range; a **vs Today** tab. **Who must hear it**: what "covered" means (audible, alert time, ranger reach), how S3-05 counts village speakers as receivers, who counts (rural + peri-urban 179M of 222.7M), the four ways to make the sound, and the scale check. **How far a voice carries**: the acoustic model, live, with the sound profile out of a village into forest. See [docs/coverage-model.md](docs/coverage-model.md). Coming next (brief v3): where speakers go, stations from speakers, ranger reach and the sensor risk map |
 | **Trades** | The decision workbench. It opens on the **bare minimum**: the cheapest design that meets every requirement (`designs/bare-minimum.json`, found by `node scripts/bare-minimum.mjs`), which every other design is compared against. Configure the system with catalog equipment (sourced, labelled options for every element), link budgets and power sizing, the 15-year cost by year, requirement margins and failure cases, team-weighted ranking (winner map, flip points, robustness, decision log), the design-space search (Pareto cloud) and sensitivity (tornado, elasticity, Monte Carlo). **Present ▸** turns a design into a seven-slide deck; every chart exports as PNG or SVG. See [docs/sdr-workbench.md](docs/sdr-workbench.md) |
 
 The requirements themselves are on the team's [requirements site](https://corrigk.github.io/congo-srr-requirements/)
@@ -36,7 +36,7 @@ line and has a switch to count them.
 | Key | Action |
 | --- | --- |
 | 1 – 3 | Research · Design · Trades |
-| → · PgDn · Space | Next step: Why → Today → Design (clickers work); in a Trades deck, next slide |
+| → · PgDn · Space | Next step: Why → Today → S-3 system → Who must hear it → How far a voice carries (clickers work); in a Trades deck, next slide |
 | ← · PgUp | Previous step or slide |
 | P | Presenter mode: larger type, higher contrast, no keyboard hints (remembered) |
 | H | Slide mode: hides the top bar so the page fills the screen for a screenshot (H again, or the corner button, to undo) |
@@ -46,7 +46,7 @@ line and has a switch to count them.
 | Esc | Close a panel; leave a Trades deck |
 
 **Deep links** open a view directly, so a slide can link straight to it: `…/#research`, `…/#research/today`,
-`…/#design`, `…/#trades`, `…/#trades/present/3`. SRR-era links still land (`#conops…` → Research or Design,
+`…/#design`, `…/#design/hear`, `…/#design/sound`, `…/#trades`, `…/#trades/present/3`. SRR-era links still land (`#conops…` → Research or Design,
 `#sdr…` → Trades). Add `?present` for presenter mode and `?slide` for slide mode. Laid out for 1280×720 and up
 (also 1024 px and phone width).
 
@@ -90,6 +90,7 @@ npm run data:page                  # analysis/data -> src/s3/v2/data (core, geo,
 node scripts/conops-report.mjs     # the ConOps model on the new data: baseline, levers, failure cases, sweet spot
 node scripts/sdr-report.mjs --opt  # the SDR engine: baseline, each catalog option, the optimizer's best designs
 node scripts/bare-minimum.mjs      # re-find the bare-minimum design (about 2 min) -> designs/bare-minimum.json
+node scripts/coverage-report.mjs   # every number on the Design tab's alerting-chain steps
 ```
 
 The page loads only the files a view needs, so the first paint stays small. The station slider defaults to the sweet
@@ -132,6 +133,8 @@ map, the number of database nodes is set with buttons; moving a node to another 
 ## Code map
 
 - `src/main.js`: state, routing, the three tabs and the Research → Design story, keyboard, theme, presenter and slide modes
+- `src/s3/steps.js`: the Research and Design steps in story order, and which view draws each
+- `src/s3/coverage/`: the alerting chain: `view.js` (Who must hear it, How far a voice carries), `acoustics.js` (the sound model)
 - `src/s3/conops/`: the Research and Design map view: `view.js` (layout, controls, results), `map.js` (the stepped
   map), `model.js` (the formulas behind the checks and the cost range)
 - `src/s3/v2/`: `ui.js` (charts, controls), `data.js` (loaders), `data/` (page data built from `analysis/`)
@@ -140,7 +143,7 @@ map, the number of database nodes is set with buttons; moving a node to another 
 - `src/sdr/`: the Trades workbench (catalog, physics, engine, decide, optimize, sensitivity, export, worker, view);
   `designs/`: preset designs, including the bare minimum
 - `analysis/`: data pipeline (Python); `scripts/`: page data, reports, bare-minimum search, service worker, test server
-- `docs/conops-model.md`, `docs/sdr-workbench.md`: how the numbers are worked out; `docs/sdr-plan.md`: the plan
+- `docs/conops-model.md`, `docs/coverage-model.md`, `docs/sdr-workbench.md`: how the numbers are worked out; `docs/sdr-plan.md`: the plan
 
 ## Data and licences
 

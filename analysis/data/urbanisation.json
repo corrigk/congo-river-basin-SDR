@@ -1,0 +1,248 @@
+{
+ "_note": "Modeled proxy: a simplified Degree of Urbanisation on WorldPop 2020 1 km inside the basin. Shares are held constant to 2041 (assumption; cities grow faster, so the urban share is understated).",
+ "_method": "Who lives where, by settlement type: urban centres, towns and peri-urban clusters, and rural areas.\n\nMethod: the Degree of Urbanisation (UN Statistical Commission 2020; GHSL) applied to WorldPop 2020 1 km\n(UN-adjusted) inside the basin outline:\n  urban centre   contiguous 1 km cells (4-neighbour) of >= 1,500 people/km2 adding up to >= 50,000 people\n  urban cluster  contiguous cells (4-neighbour) of >= 300 people/km2 adding up to >= 5,000 people, not in a centre\n  rural          everything else\nThe full method also fills gaps and smooths centres; this simplified form is labelled a modeled proxy.\nThe shares are applied to each year's basin total in population.json (assumption: shares hold to 2041; cities in\nfact grow faster, so 2041 understates the urban share).\n\nAlso counts the settled 1 km cells (>= 5 people) outside urban centres: the reason a 1 km grid cannot count\nvillage speakers (Stage 3 needs settlement data).\n\nOutputs data/urbanisation.json.",
+ "worldpop_2020_basin": 114929323,
+ "share_2020": {
+  "urban_centre": 0.1963,
+  "town_periurban": 0.217,
+  "rural": 0.5867
+ },
+ "by_year": {
+  "2026": {
+   "total": 148299363,
+   "urban_centre": 29108598,
+   "town_periurban": 32183080,
+   "rural": 87007683
+  },
+  "2031": {
+   "total": 171510833,
+   "urban_centre": 33664608,
+   "town_periurban": 37220301,
+   "rural": 100625923
+  },
+  "2036": {
+   "total": 196423834,
+   "urban_centre": 38554599,
+   "town_periurban": 42626778,
+   "rural": 115242456
+  },
+  "2041": {
+   "total": 222690668,
+   "urban_centre": 43710324,
+   "town_periurban": 48327056,
+   "rural": 130653286
+  }
+ },
+ "denominators": {
+  "all": "All basin residents",
+  "rural_periurban": "Rural plus towns and peri-urban (outside urban centres of 50k+): the design case",
+  "ranger_served": "Ranger-served area: computed with the stations in Stage 4"
+ },
+ "urban_centres": {
+  "count": 33,
+  "largest": [
+   {
+    "lon": 15.278,
+    "lat": -4.346,
+    "pop_2020": 5508839,
+    "km2": 428
+   },
+   {
+    "lon": 23.611,
+    "lat": -6.13,
+    "pop_2020": 3231413,
+    "km2": 156
+   },
+   {
+    "lon": 27.503,
+    "lat": -11.663,
+    "pop_2020": 3002363,
+    "km2": 579
+   },
+   {
+    "lon": 15.253,
+    "lat": -4.296,
+    "pop_2020": 1654595,
+    "km2": 159
+   },
+   {
+    "lon": 29.47,
+    "lat": 0.495,
+    "pop_2020": 1426595,
+    "km2": 205
+   },
+   {
+    "lon": 22.403,
+    "lat": -5.896,
+    "pop_2020": 1026851,
+    "km2": 314
+   },
+   {
+    "lon": 29.361,
+    "lat": -3.371,
+    "pop_2020": 986694,
+    "km2": 136
+   },
+   {
+    "lon": 18.536,
+    "lat": 4.404,
+    "pop_2020": 819504,
+    "km2": 79
+   },
+   {
+    "lon": 28.853,
+    "lat": -2.521,
+    "pop_2020": 795497,
+    "km2": 88
+   },
+   {
+    "lon": 29.253,
+    "lat": -1.688,
+    "pop_2020": 754767,
+    "km2": 202
+   },
+   {
+    "lon": 26.753,
+    "lat": -10.996,
+    "pop_2020": 469340,
+    "km2": 159
+   },
+   {
+    "lon": 18.828,
+    "lat": -5.038,
+    "pop_2020": 370017,
+    "km2": 82
+   },
+   {
+    "lon": 25.195,
+    "lat": 0.52,
+    "pop_2020": 291443,
+    "km2": 97
+   },
+   {
+    "lon": 29.678,
+    "lat": -4.913,
+    "pop_2020": 257419,
+    "km2": 55
+   },
+   {
+    "lon": 23.453,
+    "lat": -7.013,
+    "pop_2020": 201160,
+    "km2": 73
+   },
+   {
+    "lon": 29.295,
+    "lat": 0.12,
+    "pop_2020": 200111,
+    "km2": 73
+   },
+   {
+    "lon": 32.803,
+    "lat": -5.021,
+    "pop_2020": 167604,
+    "km2": 41
+   },
+   {
+    "lon": 25.92,
+    "lat": -2.946,
+    "pop_2020": 155726,
+    "km2": 47
+   },
+   {
+    "lon": 13.053,
+    "lat": -5.846,
+    "pop_2020": 143530,
+    "km2": 41
+   },
+   {
+    "lon": 17.378,
+    "lat": -3.321,
+    "pop_2020": 109525,
+    "km2": 40
+   },
+   {
+    "lon": 18.261,
+    "lat": 0.045,
+    "pop_2020": 107231,
+    "km2": 43
+   },
+   {
+    "lon": 20.761,
+    "lat": -6.421,
+    "pop_2020": 95342,
+    "km2": 43
+   },
+   {
+    "lon": 29.186,
+    "lat": -5.938,
+    "pop_2020": 91537,
+    "km2": 42
+   },
+   {
+    "lon": 29.003,
+    "lat": -2.73,
+    "pop_2020": 87794,
+    "km2": 39
+   },
+   {
+    "lon": 13.47,
+    "lat": -5.83,
+    "pop_2020": 83191,
+    "km2": 26
+   },
+   {
+    "lon": 26.92,
+    "lat": -8.221,
+    "pop_2020": 81496,
+    "km2": 32
+   },
+   {
+    "lon": 30.095,
+    "lat": -4.571,
+    "pop_2020": 81173,
+    "km2": 19
+   },
+   {
+    "lon": 28.895,
+    "lat": -11.213,
+    "pop_2020": 71846,
+    "km2": 32
+   },
+   {
+    "lon": 30.245,
+    "lat": 1.554,
+    "pop_2020": 68482,
+    "km2": 32
+   },
+   {
+    "lon": 27.053,
+    "lat": -8.105,
+    "pop_2020": 57662,
+    "km2": 21
+   },
+   {
+    "lon": 29.07,
+    "lat": -1.58,
+    "pop_2020": 55798,
+    "km2": 26
+   },
+   {
+    "lon": 27.128,
+    "lat": -8.021,
+    "pop_2020": 52286,
+    "km2": 21
+   },
+   {
+    "lon": 32.595,
+    "lat": -3.838,
+    "pop_2020": 51788,
+    "km2": 17
+   }
+  ]
+ },
+ "settled_cells_outside_centres": {
+  "count": 2147434,
+  "share_of_people": 0.7681
+ }
+}

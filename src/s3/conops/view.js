@@ -7,6 +7,7 @@ import { el, seg, tag, fmt, fmtM, sv, svText, chartBlock, showTip, hideTip, kv }
 import { evaluate, sweetSpot, LEO_SIZES, ASSUME, TODAY, todayReach, compareToday } from './model.js';
 import { createConopsMap, FAMILY, familyOf } from './map.js';
 import { GAP } from '../content.js';
+import { stepBar } from '../steps.js';
 import '../v2/v2.css';
 import './conops.css';
 
@@ -78,11 +79,7 @@ export async function mount(el_, step = 'why') {
       <header class="co-head">
         <div><div class="pv-eyebrow"><span class="co-e-research">Research · where things happen and what exists</span><span class="co-e-design">Design · RFP S-3</span></div>
           <h2 class="co-title"><span class="co-t-why">Why the basin needs S-3</span><span class="co-t-today">Today, without S-3</span><span class="co-t-what">What we build, where, and how many</span></h2></div>
-        <div class="seg co-step" role="group" aria-label="Research step (← →)">
-          <button data-co-step="why" aria-pressed="${S.step === 'why'}">Why</button>
-          <button data-co-step="today" aria-pressed="${S.step === 'today'}">Today</button>
-          <button data-co-step="what" aria-pressed="${S.step === 'what'}">Design →</button>
-        </div>
+        <div class="co-stepbar">${stepBar(S.step)}</div>
       </header>
       <div class="co-body">
         <div class="co-mapcol"><div class="co-map"><div class="v2-loading">Loading the basin…</div></div><div class="co-legend"></div></div>
@@ -111,7 +108,7 @@ export function setStep(step) {
   if (!root || !['why', 'today', 'what'].includes(step)) return;
   S.step = step;
   $('.co').dataset.step = step;
-  for (const b of root.querySelectorAll('[data-co-step]')) b.setAttribute('aria-pressed', b.dataset.coStep === step);
+  $('.co-stepbar').innerHTML = stepBar(step);
   renderLegend();
   map?.describe(R);
   map?.sync(S);

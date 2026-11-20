@@ -13,7 +13,7 @@ pass --basin path/to/basin.geojson and this script will use it unchanged.
 """
 import json, argparse, math, os
 import numpy as np
-from shapely.geometry import shape, mapping, MultiPoint, Point, box
+from shapely.geometry import shape, mapping, MultiPoint, Point, Polygon, box
 from shapely.ops import unary_union, transform
 from shapely import concave_hull
 import pyproj, geonamescache
@@ -88,6 +88,14 @@ def main():
             gj = json.load(f)
         basin = unary_union([shape(x["geometry"]) for x in gj.get("features", [gj])])
         source = a.basin_name
+        # The dissolved HydroBASINS outline has interior rings: gaps between level-6 catchments, not real holes (the
+        # Congo has no inland areas draining elsewhere). One sat on Mbandaka and one between Kinshasa and the Kwango,
+        # about 0.4M people in all, so the population, stations and towns all missed them. Fill them.
+        polys = list(basin.geoms) if basin.geom_type == "MultiPolygon" else [basin]
+        holes = sum(len(p.interiors) for p in polys)
+        if holes:
+            basin = unary_union([Polygon(p.exterior) for p in polys])
+            source += f"; {holes} interior gaps between catchments filled"
     else:
         import shapely
         pts = []

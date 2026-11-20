@@ -34,6 +34,7 @@ $PY scripts/site_databases.py
 $PY scripts/leo_revisit.py
 $PY scripts/build_sensors_comms_budget.py                 # uses the WDPA polygons when raw/wdpa has them
 $PY -I scripts/build_hazards.py                           # conflict, fire and flood layers for the ConOps 'why' map
+$PY -I scripts/build_urbanisation.py                      # urban centres / peri-urban / rural (Degree of Urbanisation) for the Design tab
 ```
 
 Leave out `--basin`, `--worldpop` or the WDPA files to fall back to the original modeled proxies.
@@ -49,6 +50,15 @@ Leave out `--basin`, `--worldpop` or the WDPA files to fall back to the original
 - `build_sensors_comms_budget.py`: uses the WDPA polygons when present. Sensor placement keeps the same meaning
   ("inside", "edge" ring from 10 km inside to 20 km outside the boundary); `protected_areas.json` gains polygon
   geometry. Falls back to the 21 approximate centroids otherwise.
+
+## Basin outline gaps filled, 2026-11-20 (SDR)
+
+The dissolved HydroSHEDS outline had three interior rings, gaps between level-6 catchments rather than real holes: one
+on Mbandaka (about 2,900 km², 221k people in WorldPop 2020) and one between Kinshasa and the Kwango (about 20,700 km²,
+173k people). `build_geography.py` now fills them, and the whole pipeline was rerun: the basin gains 123 grid cells and
+0.66M people in 2041 (222.0M → 222.7M), Mbandaka (455k) is back in `towns_raw.json`, receivers rise from 358,203 to
+359,528 in 2041, and the station sweet spot is unchanged (78 stations, 40.6%, $36.6M). `build_urbanisation.py` (new)
+splits the basin's people by the Degree of Urbanisation for the Design tab.
 
 ## Real-data rerun, 2026-10-26
 

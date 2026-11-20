@@ -120,6 +120,46 @@
   "gdacs": {
    "title": "GDACS Global Disaster Alert and Coordination System: flood event alerts, European Commission Joint Research Centre and UN OCHA",
    "url": "https://www.gdacs.org/"
+  },
+  "fema_owsb_2006": {
+   "title": "FEMA, Outdoor Warning Systems Technical Bulletin v2.0 (2006): ambient + 10 dB, attenuation per doubling, woods loss per 100 ft, building losses, STI/SII",
+   "url": "https://doa.nc.gov/documents/files/fema-guide-2006/open"
+  },
+  "fema_cpg117": {
+   "title": "FEMA CPG 1-17, Outdoor Warning Systems Guide (1980)",
+   "url": "https://www.doa.nc.gov/documents/files/outdoor-warning-systems-guide-cpg1-17/open"
+  },
+  "fedsig_guide": {
+   "title": "Federal Signal, industrial systems product selection guide: 6 vs 10 dB per distance doubled",
+   "url": "https://www.fedsig.com/sites/default/files/industrial_systems_guide/481/"
+  },
+  "noaa_ahab": {
+   "title": "NOAA AHAB siren justification: MOD5020, 120 dB at 100 ft to 70 dB at 3,100 ft",
+   "url": "https://nctr.pmel.noaa.gov/tsu400/documents/Pacific_County_Field_trip/AHAB_Justification_final.pdf"
+  },
+  "nist_tn1950": {
+   "title": "NIST Technical Note 1950, Outdoor Siren Systems",
+   "url": "https://nvlpubs.nist.gov/nistpubs/TechnicalNotes/NIST.TN.1950.pdf"
+  },
+  "arxiv_2211_16077": {
+   "title": "Physics-based detection distance in a Neotropical rainforest: 0.019 dB/kHz/m attenuation (arXiv 2211.16077)",
+   "url": "https://arxiv.org/pdf/2211.16077"
+  },
+  "martens_forest": {
+   "title": "Martens, Sound propagation in forests (Institute of Acoustics)",
+   "url": "https://www.ioa.org.uk/system/files/publications/MJM%20MARTENS%20SOUND%20PROPAGATION%20IN%20FORESTS.pdf"
+  },
+  "marten_marler_1977": {
+   "title": "Marten, Quine and Marler (1977), sound transmission in tropical forest, Panama",
+   "url": "https://www.doi.org/10.1007/BF00299741"
+  },
+  "usfs_air": {
+   "title": "USDA Forest Service, sound propagation in open air (air absorption)",
+   "url": "https://www.fs.usda.gov/t-d/programs/im/sound_measure/helo_appendix5.shtml"
+  },
+  "degurba_2020": {
+   "title": "UN Statistical Commission (2020), Degree of Urbanisation: a method to delineate cities, urban and rural areas for international comparisons",
+   "url": "https://unstats.un.org/unsd/statcom/51st-session/documents/BG-Item3j-Recommendation-E.pdf"
   }
  }
 }

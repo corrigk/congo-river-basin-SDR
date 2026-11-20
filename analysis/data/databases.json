@@ -1,7 +1,7 @@
 {
  "_method": "Step 4: where do the main hub and the regional databases go?\n\nRule set (each is a stated design decision):\n  1. Main hub = Kinshasa (fixed): largest urban area in the basin, national\n     government and disaster agency seat, Tier III data centre, subsea-cable\n     route via Muanda, Inga hydro grid.\n  2. Up to 3 more database nodes (4 total). Choose the set that minimizes the\n     population-weighted distance from every basin resident to their nearest\n     node (p-median, 2041 population), subject to:\n       - at least MIN_SEP_KM between any two nodes (no shared flood, power or\n         conflict event takes out two at once)\n       - not in, or within CONFLICT_BUFFER_KM of, a city under active armed-group\n         control (Goma, Bukavu)\n       - city of >= 400k people (staff, power, fibre, airport)\nOutputs data/databases.json",
  "min_sep_km": 500,
- "kinshasa_only_mean_km": 1120,
+ "kinshasa_only_mean_km": 1118,
  "best_by_count": {
   "2": {
    "nodes": [
@@ -53,6 +53,18 @@
   {
    "nodes": [
     "Kinshasa",
+    "Bangui",
+    "Mbuji-Mayi",
+    "Kalemie"
+   ],
+   "k": 4,
+   "mean_km": 360,
+   "pct_pop_within_500km": 75.4,
+   "min_sep_km": 620
+  },
+  {
+   "nodes": [
+    "Kinshasa",
     "Kananga",
     "Kisangani",
     "Kalemie"
@@ -66,24 +78,12 @@
    "nodes": [
     "Kinshasa",
     "Bangui",
-    "Mbuji-Mayi",
-    "Kalemie"
-   ],
-   "k": 4,
-   "mean_km": 361,
-   "pct_pop_within_500km": 75.4,
-   "min_sep_km": 620
-  },
-  {
-   "nodes": [
-    "Kinshasa",
-    "Bangui",
     "Kananga",
     "Kalemie"
    ],
    "k": 4,
    "mean_km": 362,
-   "pct_pop_within_500km": 75.0,
+   "pct_pop_within_500km": 75.1,
    "min_sep_km": 750
   },
   {
@@ -95,20 +95,20 @@
    ],
    "k": 4,
    "mean_km": 371,
-   "pct_pop_within_500km": 74.0,
+   "pct_pop_within_500km": 74.1,
    "min_sep_km": 586
   },
   {
    "nodes": [
     "Kinshasa",
-    "Kisangani",
-    "Tshikapa",
+    "Kananga",
+    "Mbandaka",
     "Kalemie"
    ],
    "k": 4,
    "mean_km": 372,
-   "pct_pop_within_500km": 75.4,
-   "min_sep_km": 649
+   "pct_pop_within_500km": 73.7,
+   "min_sep_km": 586
   }
  ],
  "candidates": [
@@ -120,7 +120,7 @@
    "notes": "Main hub (fixed). UN 2025 urban area about 10.9M; Raxio Tier III data centre (1.5 MW, 2024); OADC data centre; WACS subsea cable lands at Muanda.",
    "km_from_kinshasa": 0,
    "excluded": false,
-   "pop_within_300km_2041_M": 22.6
+   "pop_within_300km_2041_M": 22.9
   },
   {
    "name": "Brazzaville",
@@ -130,7 +130,7 @@
    "notes": "Capital across the river from Kinshasa; too close to be an independent backup.",
    "km_from_kinshasa": 8,
    "excluded": true,
-   "pop_within_300km_2041_M": 22.5
+   "pop_within_300km_2041_M": 22.8
   },
   {
    "name": "Bangui",
@@ -210,7 +210,7 @@
    "notes": "About 0.55M.",
    "km_from_kinshasa": 395,
    "excluded": false,
-   "pop_within_300km_2041_M": 16.9
+   "pop_within_300km_2041_M": 17.2
   },
   {
    "name": "Mbandaka",
@@ -220,7 +220,7 @@
    "notes": "Equator, Cuvette Centrale; flood-exposed river city.",
    "km_from_kinshasa": 586,
    "excluded": false,
-   "pop_within_300km_2041_M": 8.2
+   "pop_within_300km_2041_M": 8.6
   },
   {
    "name": "Kalemie",

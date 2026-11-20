@@ -160,7 +160,6 @@ em.is-good { color: var(--good); } em.is-bad { color: var(--critical); } em.is-n
 .co-cmp-r.is-bad { border-color: var(--critical); }
 .co-cmp-r.is-bad .co-cmp-n { color: var(--critical); }
 
-/* Research and Design share this view: the eyebrow follows the step; Design hides the Research step buttons */
+/* Research and Design share this view: the eyebrow follows the step (the step buttons come from src/s3/steps.js) */
 .co-e-design, .co[data-step="what"] .co-e-research { display: none; }
 .co[data-step="what"] .co-e-design { display: inline; }
-.co[data-step="what"] .co-step { display: none; }

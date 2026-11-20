@@ -16,12 +16,12 @@
    "run": "mix_2041",
    "stations": 78,
    "station_cost_musd": 36.63,
-   "pct_people_covered": 40.61
+   "pct_people_covered": 40.62
   },
   {
    "run": "radio_2041",
    "stations": 74,
-   "station_cost_musd": 36.0,
+   "station_cost_musd": 36.12,
    "pct_people_covered": 41.49
   }
  ],

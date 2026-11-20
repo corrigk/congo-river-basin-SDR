@@ -4,17 +4,18 @@ import './s3/v2/v2.css'; // tokens and labels (.vtag) used across the tabs
 import { ICON, MARK } from './icons.js';
 import * as V from './s3/views.js';
 import { createOffline } from './s3/offline.js';
+import { STORY, TAB_OF, VIEW_OF as VIEW_OF_STEP, TITLE } from './s3/steps.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const app = $('#app');
 
-// Three tabs. Research (where things happen, what exists, the gaps) and Design (what S-3 builds) are steps of one
-// map view (src/s3/conops), so → walks the story across both; Trades is the SDR workbench (src/sdr).
+// Three tabs. Research (where things happen, what exists, the gaps) and Design (what S-3 builds, and the alerting
+// chain) are steps in one story order (src/s3/steps.js), so → walks across both. Each step is drawn by the basin map
+// (src/s3/conops) or the alerting chain (src/s3/coverage). Trades is the SDR workbench (src/sdr).
 const TABS = ['research', 'design', 'trades'];
-const STORY = [['research', 'why'], ['research', 'today'], ['design', 'what']];
-const VIEW_OF = { research: 'conops', design: 'conops', trades: 'sdr' };
-const STEP_TITLE = { why: 'Research: why the basin needs S-3', today: 'Research: today, without S-3', what: 'Design: what we build, where, and how many' };
+const view = () => (state.tab === 'trades' ? 'sdr' : VIEW_OF_STEP[state.step]);
+const last = { research: 'why', design: 'what' }; // the step each tab returns to
 
 // ---------- static chrome ----------
 $('#brand-mark').innerHTML = MARK;
@@ -38,13 +39,13 @@ function readHash() {
   const [tab, sub, n] = location.hash.slice(1).split('/');
   const slide = sub === 'present' ? Math.max(0, (+n || 1) - 1) : null;
   if (tab === 'trades' || tab === 'sdr') { state.tab = 'trades'; state.sdrSlide = slide; return; }
-  if (tab === 'design' || (tab === 'conops' && sub === 'what')) { state.tab = 'design'; state.step = 'what'; return; }
+  if (tab === 'design' || (tab === 'conops' && sub === 'what')) { state.tab = 'design'; state.step = TAB_OF[sub] === 'design' ? sub : 'what'; return; }
   state.tab = 'research';
   state.step = sub === 'today' ? 'today' : 'why';
 }
 function writeHash() {
   const h = state.tab === 'trades' ? `#trades${state.sdrSlide != null ? `/present/${state.sdrSlide + 1}` : ''}`
-    : state.tab === 'design' ? '#design' : `#research${state.step === 'today' ? '/today' : ''}`;
+    : state.tab === 'design' ? `#design${state.step === 'what' ? '' : `/${state.step}`}` : `#research${state.step === 'today' ? '/today' : ''}`;
   if (location.hash !== h) history.replaceState(null, '', h);
 }
 addEventListener('hashchange', () => { readHash(); render(); });
@@ -57,12 +58,13 @@ function render() {
     t.setAttribute('aria-selected', on);
     t.tabIndex = on ? 0 : -1;
   }
-  $('#view-conops').hidden = VIEW_OF[state.tab] !== 'conops';
-  $('#view-sdr').hidden = VIEW_OF[state.tab] !== 'sdr';
+  for (const v of ['conops', 'coverage', 'sdr']) $(`#view-${v}`).hidden = view() !== v;
   $('#view-conops').setAttribute('aria-labelledby', `tab-${state.tab === 'design' ? 'design' : 'research'}`);
+  if (state.tab !== 'trades') last[state.tab] = state.step;
   moveInk();
   renderPanel();
   renderConops();
+  renderCoverage();
   renderSdr();
   writeHash();
 }
@@ -84,24 +86,31 @@ function renderPanel() {
 // ---------- Research and Design: the map view (loaded the first time it is shown) ----------
 let conops = null;
 function renderConops() {
-  if (VIEW_OF[state.tab] !== 'conops') return;
+  if (view() !== 'conops') return;
   (conops ||= import('./s3/conops/view.js').then(async m => { await m.mount($('#view-conops'), state.step); return m; }))
-    .then(m => { if (VIEW_OF[state.tab] === 'conops') m.setStep(state.step); });
+    .then(m => { if (view() === 'conops') m.setStep(state.step); });
 }
-// One story across both tabs: Why → Today (Research) → With S-3 (Design).
+// The alerting chain: who must hear it, how far a voice carries (and the later coverage stages).
+let coverage = null;
+function renderCoverage() {
+  if (view() !== 'coverage') return;
+  (coverage ||= import('./s3/coverage/view.js').then(m => { m.mount($('#view-coverage'), state.step); return m; }))
+    .then(m => { if (view() === 'coverage') m.setStep(state.step); });
+}
+// One story across both tabs: Why → Today (Research) → S-3 system → who must hear it → how far a voice carries (Design).
 function goStory(delta) {
-  const i = STORY.findIndex(([t, s]) => t === state.tab && s === state.step);
-  const [tab, step] = STORY[Math.max(0, Math.min(STORY.length - 1, i + delta))];
-  setStep(step, tab);
+  const i = STORY.indexOf(state.step);
+  setStep(STORY[Math.max(0, Math.min(STORY.length - 1, i + delta))]);
 }
-function setStep(step, tab = step === 'what' ? 'design' : 'research') {
-  if (step === state.step && tab === state.tab) return;
+function setStep(step) {
+  if (step === state.step && TAB_OF[step] === state.tab) return;
+  const before = view(), tab = TAB_OF[step];
   const tabChanged = tab !== state.tab;
   state.step = step;
   state.tab = tab;
-  if (tabChanged) render();
-  else { writeHash(); conops?.then(m => m.setStep(step)); }
-  $('#announce').textContent = STEP_TITLE[step];
+  if (tabChanged || view() !== before) render();
+  else { last[tab] = step; writeHash(); (view() === 'conops' ? conops : coverage)?.then(m => m.setStep(step)); }
+  $('#announce').textContent = TITLE[step];
 }
 
 // ---------- Trades: the SDR workbench (loaded the first time it is opened) ----------
@@ -120,14 +129,13 @@ let resizeT;
 addEventListener('resize', () => {
   moveInk();
   clearTimeout(resizeT);
-  resizeT = setTimeout(() => { if (VIEW_OF[state.tab] === 'conops') conops?.then(m => m.refit()); }, 200);
+  resizeT = setTimeout(() => { if (view() === 'conops') conops?.then(m => m.refit()); }, 200);
 });
 
 function setTab(t) {
   if (!TABS.includes(t) || t === state.tab) return;
   state.tab = t;
-  if (t === 'design') state.step = 'what';
-  else if (t === 'research' && state.step === 'what') state.step = 'why';
+  if (t !== 'trades') state.step = last[t];
   render();
 }
 function togglePanel(p) { state.panel = state.panel === p ? null : p; renderPanel(); }
@@ -142,7 +150,7 @@ function moveInk() {
 function setSlide(on) {
   app.classList.toggle('is-slide', on);
   $('.slide-exit').hidden = !on;
-  requestAnimationFrame(() => { moveInk(); if (VIEW_OF[state.tab] === 'conops') conops?.then(m => m.refit()); });
+  requestAnimationFrame(() => { moveInk(); if (view() === 'conops') conops?.then(m => m.refit()); });
 }
 function setPresent(on) {
   app.classList.toggle('is-present', on);
@@ -195,7 +203,7 @@ document.addEventListener('click', e => {
       case 'present': setPresent(!app.classList.contains('is-present')); return;
       case 'slide': setSlide(!app.classList.contains('is-slide')); return;
       case 'theme': toggleTheme(); return;
-      case 'skip': { const v = $(`#view-${VIEW_OF[state.tab]}`); v.tabIndex = -1; v.focus(); return; }
+      case 'skip': { const v = $(`#view-${view()}`); v.tabIndex = -1; v.focus(); return; }
       case 'sources': togglePanel('sources'); return;
     }
   }
@@ -221,8 +229,8 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (/^[1-3]$/.test(k)) { setTab(TABS[+k - 1]); return; }
-  if (VIEW_OF[state.tab] === 'conops' && (k === 'ArrowRight' || k === 'PageDown' || k === ' ')) { e.preventDefault(); goStory(1); return; }
-  if (VIEW_OF[state.tab] === 'conops' && (k === 'ArrowLeft' || k === 'PageUp')) { e.preventDefault(); goStory(-1); return; }
+  if (state.tab !== 'trades' && (k === 'ArrowRight' || k === 'PageDown' || k === ' ')) { e.preventDefault(); goStory(1); return; }
+  if (state.tab !== 'trades' && (k === 'ArrowLeft' || k === 'PageUp')) { e.preventDefault(); goStory(-1); return; }
   if (lk === 'f') { fullscreen(); return; }
   if (lk === 'p') { setPresent(!app.classList.contains('is-present')); return; }
   if (lk === 'h') { setSlide(!app.classList.contains('is-slide')); return; }

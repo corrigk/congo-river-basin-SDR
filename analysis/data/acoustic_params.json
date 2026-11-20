@@ -1,0 +1,25 @@
+{
+  "_note": "Parameters of the outdoor voice-alert model (brief v3, Appendix A; formula in docs/coverage-model.md). low / base / high, each with its basis. 'sourced' values cite analysis/data/sources.json ids; everything else is an assumption to replace with field measurements (the pilot sound check).",
+  "_method": "L(r) = L_src at 100 ft - D log2(r / 30.48 m) - air (r - 30.48 m) - forest x (metres of path beyond the village clearing). Heard where L(r) >= ambient + margin (+ building loss indoors). Terrain shadowing waits for the Copernicus DEM (Stage 3).",
+  "r0_m": 30.48,
+  "params": {
+    "src_t0_db": { "label": "Station tower array, level at 100 ft", "unit": "dB", "low": 120, "base": 124, "high": 124, "basis": "sourced", "sources": ["fedsig_modulator"], "note": "3.2 kW class, the speaker in the station cost model" },
+    "src_t1_db": { "label": "Village speaker, level at 100 ft", "unit": "dB", "low": 110, "base": 116, "high": 120, "basis": "assumption", "sources": ["noaa_ahab"], "note": "400-800 W voice speaker, smaller than the tower array; the MOD5020 class is 120 dB" },
+    "d_land_db": { "label": "Spreading and ground loss per doubling of distance, land", "unit": "dB", "low": 6, "base": 8, "high": 10, "basis": "sourced", "sources": ["fema_owsb_2006", "fedsig_guide"], "note": "6 = FEMA soft ground beyond about 250 ft; 10 = vendor outdoor-siren rule" },
+    "d_water_db": { "label": "Same, over open water", "unit": "dB", "low": 3, "base": 4, "high": 6, "basis": "sourced", "sources": ["fema_owsb_2006"], "note": "FEMA: hard surfaces and water lose about 3 dB per doubling" },
+    "air_db_km": { "label": "Air absorption at 1 kHz, 30 °C, high humidity", "unit": "dB/km", "low": 3, "base": 5, "high": 7, "basis": "assumption", "sources": ["usfs_air"], "note": "From ISO 9613-1 tables; compute exactly in Stage 3" },
+    "forest_db_100m": { "label": "Forest excess attenuation, voice band", "unit": "dB per 100 m", "low": 2, "base": 6.6, "high": 20, "basis": "sourced", "sources": ["arxiv_2211_16077", "fema_owsb_2006", "martens_forest"], "note": "1.9 measured in French Guiana rainforest; 6.6 FEMA medium-dense woods at 500 Hz (9.8 at 1 kHz); about 20 in older tropical work. A tenfold spread: the reason for the range" },
+    "ambient_village_day_dba": { "label": "Ambient, village by day", "unit": "dBA", "low": 40, "base": 45, "high": 50, "basis": "assumption", "note": "Measure in the pilot" },
+    "ambient_night_dba": { "label": "Ambient, forest edge at dusk and night", "unit": "dBA", "low": 50, "base": 55, "high": 60, "basis": "assumption", "note": "Insects peak at dawn, dusk and night; the design case" },
+    "ambient_town_dba": { "label": "Ambient, town", "unit": "dBA", "low": 50, "base": 55, "high": 60, "basis": "assumption" },
+    "margin_db": { "label": "Margin above ambient to be heard", "unit": "dB", "low": 10, "base": 10, "high": 15, "basis": "sourced", "sources": ["fema_owsb_2006"], "note": "FEMA: at least 10 dB above ambient" },
+    "building_open_db": { "label": "Building loss, open eaves or windows", "unit": "dB", "low": 12, "base": 12, "high": 12, "basis": "sourced", "sources": ["fema_owsb_2006"], "note": "FEMA Table 3, light frame, windows open" },
+    "building_closed_db": { "label": "Building loss, closed or masonry", "unit": "dB", "low": 20, "base": 22, "high": 25, "basis": "sourced", "sources": ["fema_owsb_2006"], "note": "FEMA Table 3: 20-25 dB" },
+    "mast_m": { "label": "Speaker mounting height", "unit": "m", "low": 6, "base": 12, "high": 30, "basis": "assumption", "note": "Mount high: sound from a source at or below 1 m loses its low frequencies to the ground (Marten and Marler)" },
+    "clearing_m": { "label": "Village clearing radius before the forest starts", "unit": "m", "low": 150, "base": 300, "high": 600, "basis": "assumption", "note": "Derived per settlement from buildings and canopy in Stage 3" },
+    "t2_reach_m": { "label": "Community receiver reach, indoors / outdoors", "unit": "m", "low": [20, 50], "base": [50, 150], "high": [80, 250], "basis": "assumption" },
+    "t1_cutoff_people": { "label": "Smallest gain worth a village speaker", "unit": "people", "low": 50, "base": 150, "high": 300, "basis": "assumption", "note": "Below this a $25 receiver is cheaper" },
+    "t1_installed_usd": { "label": "Village speaker installed: speaker head, GEO receiver and controller, mount or mast, solar", "unit": "USD", "low": 1500, "base": 3000, "high": 6000, "basis": "assumption", "note": "For the scale check only; replace with vendor quotes (brief §15)" },
+    "people_per_village": { "label": "People per village", "unit": "people", "low": 500, "base": 500, "high": 500, "basis": "assumption", "note": "The community-receiver rule in sensors.json: one receiver per about 500 rural people" }
+  }
+}

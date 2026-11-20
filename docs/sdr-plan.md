@@ -25,6 +25,12 @@ frozen. Three tabs, no numbers: **Research** (front page: where things happen, w
 design). Function flow, the scenarios, the 3D globe and the SRR requirement views were removed; requirements live on
 the requirements site. Staff costs are out of the 15-year total by default (team rule) with a switch to count them.
 
+## Coverage work (brief v3), Stage 1 done 2026-11-20
+
+Design tab steps **Who must hear it** and **How far a voice carries** (`docs/coverage-model.md`); the basin outline's
+gaps filled (Mbandaka was outside it) and the pipeline rerun; `build_urbanisation.py` for the design population;
+`scripts/coverage-report.mjs`. Next: Stage 3 (settlements from GRID3, speaker siting, terrain profiles), then 2, 4, 5, 6.
+
 ## What it is
 
 The SRR page, turned into a **decision workbench** for the System Definition Review: an interactive page that monitors

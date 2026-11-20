@@ -1,6 +1,6 @@
 {
   "name": "Bare minimum (meets every requirement)",
-  "notes": "The cheapest design that meets every Level 0 requirement (S3-01 to S3-10) and the $400M cap, found by scripts/bare-minimum.mjs on 2026-11-20: $204.0M over 15 years (range $159-315M), staff not counted (team rule). Tightest requirement: S3-03 at 5% margin. Every margin is thin by design: this is the floor every other design is compared against.",
+  "notes": "The cheapest design that meets every Level 0 requirement (S3-01 to S3-10) and the $400M cap, found by scripts/bare-minimum.mjs on 2026-11-20: $204.1M over 15 years (range $159-315M), staff not counted (team rule). Tightest requirement: S3-03 at 5% margin. Every margin is thin by design: this is the floor every other design is compared against.",
   "year": 2041,
   "mode": "mix",
   "n": 2,
