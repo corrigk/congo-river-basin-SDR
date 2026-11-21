@@ -86,6 +86,9 @@ if (spk && sts) {
   });
 }
 
+// Crew rounds: showcase major hubs and their routes (rounds_routes.py, run by hubs_from_speakers.py).
+if (fs.existsSync(new URL('rounds.json', SRC))) write('rounds.json', read('rounds.json'));
+
 const st = read('stations.json');
 for (const y of pop.years) {
   const runs = {};

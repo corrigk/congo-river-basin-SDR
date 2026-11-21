@@ -303,4 +303,26 @@ In the S-3 network step, the "Speakers" mode uses the major hubs (minor hubs are
 not count for the 1-hour response; the default's major hubs reach 43% of people by radio or a 1-hour response) and
 its station line becomes "Ranger hubs (N major + M minor)" at this cost. The map shows the default design.
 
-Later: an animation of a crew's rounds through the forest over a week, a month and a year (team request).
+## Crew rounds: a year of one major hub (`#design/rounds`)
+
+Team request: see how rangers actually travel on a maintenance schedule over a week, a month and a year. Opened from
+"What's at a station" ("Watch the crews' year"). `analysis/scripts/rounds_routes.py` (run by hubs_from_speakers.py)
+exports three showcase major hubs of the default design, one river, one road and one remote, with every place their
+crews go and the fastest route there on the SRR travel model (each step boat, road or foot), and up to 10 speaker cells
+around each minor hub (`analysis/data/rounds.json`). `src/s3/coverage/rounds.js` simulates the year with the station
+design's settings and animates it: the teams move along the routes (boat, motorbike, on foot), work from the minor hub
+out to its speakers by day and rest at night; a calendar shows who is where over a week, a month or the year.
+
+The schedule: teams = the hub's crews × people ÷ rangers per team; each team works a 30-day rotation (on for its share
+of the 200 field days); every minor hub and village stay gets enough stays for its speakers' routine visit (at least
+one a year); speaker faults arrive at random (0.3 a speaker a year) and wait up to 7, 21 or 45 days for a trip to that
+place, else get a repair trip of their own (one working day there); jobs go in date order to the team that can start
+soonest inside a duty block.
+
+**What it shows (default settings, faults wait up to 21 days):** the crews need more days than they have: 153% of
+their duty days at the river hub (1,298 speakers, 30 places, 2 crews), 120% at the road hub, 109% at the remote hub;
+repairs wait a median of 40 to 90 days. The cost model averages work over speakers; at real places every small minor
+hub needs at least one full trip a year, and faults far out need trips of their own (70 a year at the river hub). With
+one more crew and faults waiting up to 45 days for the next trip, the river hub fits (93%) with a median repair wait of
+27 days. So the hub design's crew numbers are optimistic by about 1.5 to 2.5 times until repairs are handled nearer the
+speaker (caretakers who can do simple repairs, spares at minor hubs) or crews are added. Seasons are not in yet.

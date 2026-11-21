@@ -6,15 +6,15 @@ export const STEPS = {
   research: [['why', 'Why'], ['today', 'Today']],
   design: [['alerts', 'Speakers & receivers'], ['stations', 'Ranger stations'], ['kit', "What's at a station"], ['what', 'S-3 network']],
 };
-export const DETAIL = { hear: 'Who must hear it', sound: 'How far a voice carries' }; // Design tab, explainers
+export const DETAIL = { hear: 'Who must hear it', sound: 'How far a voice carries', rounds: 'Crew rounds' }; // Design tab, explainers
 export const STORY = [...STEPS.research, ...STEPS.design].map(([s]) => s);
 export const TAB_OF = {
   ...Object.fromEntries(Object.entries(STEPS).flatMap(([tab, list]) => list.map(([s]) => [s, tab]))),
   ...Object.fromEntries(Object.keys(DETAIL).map(s => [s, 'design'])),
 };
-export const VIEW_OF = { why: 'conops', today: 'conops', alerts: 'conops', stations: 'conops', kit: 'conops', what: 'conops', hear: 'coverage', sound: 'coverage' };
-// → from an explainer continues the chain from the speakers step.
-export const storyIndex = step => (STORY.includes(step) ? STORY.indexOf(step) : STORY.indexOf('alerts'));
+export const VIEW_OF = { why: 'conops', today: 'conops', alerts: 'conops', stations: 'conops', kit: 'conops', what: 'conops', hear: 'coverage', sound: 'coverage', rounds: 'coverage' };
+// → from an explainer continues the chain from the speakers step (from the crew rounds, from the station step).
+export const storyIndex = step => (STORY.includes(step) ? STORY.indexOf(step) : STORY.indexOf(step === 'rounds' ? 'kit' : 'alerts'));
 // Link names: #design/network for the S-3 network step (its id stays 'what' for older #conops/what links).
 export const hashOf = step => (step === 'what' ? 'network' : step);
 export const stepOfHash = sub => (sub === 'network' || sub === 'what' ? 'what' : TAB_OF[sub] ? sub : null);
@@ -22,7 +22,7 @@ export const TITLE = {
   why: 'Research: why the basin needs S-3', today: 'Research: today, without S-3',
   alerts: 'Design: where the alerts are heard, speakers and receivers', stations: 'Design: the ranger stations that look after the speakers',
   kit: "Design: what's at a ranger station, its crews and its cost",
-  what: 'Design: the S-3 network', hear: 'Design: who must hear the alert', sound: 'Design: how far a voice carries',
+  what: 'Design: the S-3 network', hear: 'Design: who must hear the alert', sound: 'Design: how far a voice carries', rounds: "Design: a year of the crews' rounds",
 };
 
 // The step buttons for the current step's tab (clicks are handled by src/main.js through data-co-step).

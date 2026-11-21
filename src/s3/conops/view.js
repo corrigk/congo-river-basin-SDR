@@ -9,7 +9,7 @@ import { evaluate, sweetSpot, LEO_SIZES, ASSUME, TODAY, todayReach, compareToday
 import { createConopsMap, FAMILY, familyOf } from './map.js';
 import { GAP } from '../content.js';
 import { stepBar } from '../steps.js';
-import { evaluateKit, evaluateSetups, DEFAULT_KIT, KIT } from '../coverage/stationkit.js';
+import { evaluateKit, evaluateSetups, DEFAULT_KIT, KIT, SHARED } from '../coverage/stationkit.js';
 import '../v2/v2.css';
 import './conops.css';
 
@@ -54,6 +54,7 @@ async function loadYear() {
   G.cov.srr = st.runs.mix.stations.slice(0, sweetSpot(st.runs.mix).knee); // the SRR stations, for comparison
   G.todayNow = G.todayReach.share(pop); // today's reach for this year's population
   spot = sweetSpot(st.runs[S.mode]);
+  SHARED.kit = S.kit;
   S.kitPlan = evaluateKit(S.kit, G.cov);
   baseKit = evaluateKit(DEFAULT_KIT(), G.cov);
   if (S.n == null) S.n = S.mode === 'alerts' ? hubN(S.kitPlan, st) : spot.knee;
@@ -516,6 +517,7 @@ function renderKit() {
         : `over 15 years on day trips only; ${fmt(P.unserved)} speakers deep in the forest are left out.` })),
     spec, cmp, tiers, access, compare,
     el('p', { class: 'co-note' }, `Minor hubs are empty most of the time, so only the ${fmt(P.nMajor)} major hubs count for the 1-hour response in the S-3 network. The map shows the default design (a long day out); the numbers follow your settings.`),
+    el('div', { class: 'co-chain' }, el('button', { class: 'sd-btn', 'data-co-step': 'rounds', text: "Watch the crews' year →" }), el('span', { text: 'A year of one major hub\'s crews, day by day, with these settings: who is travelling, who is staying at a minor hub, how long a repair waits.' })),
     el('p', { class: 'co-hint' }, 'Press ', el('kbd', { text: '→' }), ' to wire the major hubs to the satellites and hubs.'));
 }
 

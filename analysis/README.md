@@ -41,7 +41,7 @@ $PY scripts/site_speakers.py                              # village speakers and
 $PY scripts/fetch_pilot.py                                # Mbandaka pilot windows of Copernicus GLO-30 and ETH canopy height -> raw/pilot/ (range requests)
 $PY scripts/pilot_profiles.py                             # 12 pilot speakers x 12 bearings over real terrain and canopy -> data/profiles_pilot.json
 $PY scripts/stations_from_speakers.py                     # ranger stations derived from the speakers (X per station, 8 h trips)
-$PY scripts/hubs_from_speakers.py                         # major and minor ranger hubs from the speakers (8 / 12 / 24 h to a minor hub)
+$PY scripts/hubs_from_speakers.py                         # major and minor ranger hubs from the speakers (8 / 12 / 24 h to a minor hub); also writes rounds.json (rounds_routes.py)
 ```
 
 Leave out `--basin`, `--worldpop` or the WDPA files to fall back to the original modeled proxies.

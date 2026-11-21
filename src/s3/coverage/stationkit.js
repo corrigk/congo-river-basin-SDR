@@ -24,6 +24,8 @@ import { rangeTo, value } from './acoustics.js';
 export { KIT };
 const LIFE = 15, TYPES = ['road', 'river', 'remote'];
 export const LOGISTICS = KIT.access.logistics;
+// The station design's current settings, shared with the crew-rounds page (set by the Design map view).
+export const SHARED = { kit: null };
 const b = (sec, k) => KIT[sec][k].base;
 const opt = (sec, part, id) => KIT[sec][part].options.find(o => o.id === id) || KIT[sec][part].options[0];
 const sum = a => a.reduce((x, y) => x + y, 0);

@@ -37,6 +37,7 @@ import json, os, heapq, math
 import numpy as np
 import travel as T
 from stations_from_speakers import coverage_run
+import rounds_routes
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, "..", "data")
@@ -225,6 +226,7 @@ def main():
     last = out["runs"]["2041"]["stations"][-1]
     print(f"default X = {X}: {s['majors']} major hubs + {s['minors']} minor hubs, {s['unassigned']:,} speakers beyond reach; "
           f"major hubs reach {last['cum_pct']}% of people by radio or a 1-hour response; hubs.json {os.path.getsize(os.path.join(DATA, 'hubs.json'))/1e3:.0f} kB")
+    rounds_routes.export(M, ch, hubs, hub_of, t1, T_LOCAL, MIN_MINOR)   # showcase routes for the crew-rounds animation
 
 
 if __name__ == "__main__":

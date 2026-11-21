@@ -3,7 +3,7 @@
 import core from './data/core.json';
 
 export const D = core;
-const loaders = import.meta.glob(['./data/geo.json', './data/grid.json', './data/pop-*.json', './data/stations-*.json', './data/hazards.json', './data/today.json', './data/coverage.json'], { import: 'default' });
+const loaders = import.meta.glob(['./data/geo.json', './data/grid.json', './data/pop-*.json', './data/stations-*.json', './data/hazards.json', './data/today.json', './data/coverage.json', './data/rounds.json'], { import: 'default' });
 const cache = new Map();
 const load = name => {
   if (!cache.has(name)) cache.set(name, loaders[`./data/${name}.json`]().catch(e => { cache.delete(name); throw e; }));
@@ -16,6 +16,7 @@ export const stations = year => load(`stations-${year}`);
 export const hazards = () => load('hazards'); // ConOps "why" layers
 export const today = () => load('today'); // ConOps "today" layer: towns with a modeled reach radius
 export const coverage = () => load('coverage'); // speakers, receivers and the stations derived from them
+export const rounds = () => load('rounds'); // showcase major hubs and their crews' routes (crew rounds)
 
 // first_covered_b64: little-endian Uint16 per cell, the index of the first station that covers it (65535 = never).
 const firstCache = new Map();

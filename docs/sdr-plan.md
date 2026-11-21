@@ -38,6 +38,13 @@ step keeping the one before it faintly and animating the links in. Speakers come
 (`site_speakers.py`, hazard-first rollout), stations from the speakers (`stations_from_speakers.py`), and the network
 step uses those stations. Stage 3 (GRID3) replaces the proxy with no page change.
 
+## Crew rounds, 2026-11-20
+
+New Design page "Crew rounds" (from What's at a station): a year of three showcase major hubs (river, road, remote)
+simulated day by day and animated on their real routes, with a week / month / year calendar of who is where. It shows
+the hub design's crews are short by 1.5 to 2.5 times once repairs need their own trips; next: feed that back into the
+crew sizing (or add caretaker repairs), then seasons.
+
 ## Major and minor ranger hubs, 2026-11-20
 
 Team design: crews live at major hubs; minor hubs are outstations where 1-2 rangers stay a few nights; under 10

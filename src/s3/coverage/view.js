@@ -3,7 +3,8 @@
 //          the sound, and the scale check that shows why village speakers alone cannot carry it
 //   sound  How far a voice carries: the acoustic model, live, with the sound profile out of a village into forest
 // Later stages add where speakers go, who looks after them, ranger reach and sensors (docs/sdr-plan.md).
-import { D } from '../v2/data.js';
+import { D, geo as geoData, coverage as coverageData, rounds as roundsData } from '../v2/data.js';
+import { roundsStep } from './rounds.js';
 import { el, seg, tag, fmt, sv, svText, chartBlock, card, showTip, hideTip, kv } from '../v2/ui.js';
 import { reqBy } from '../content.js';
 import { stepBar } from '../steps.js';
@@ -37,7 +38,7 @@ export function mount(host, step = 'hear') {
     <div class="cv" data-step="${step}">
       <header class="co-head">
         <div><div class="pv-eyebrow">Design · the alerting chain</div>
-          <h2 class="co-title"><span class="cv-t-hear">Who must hear the alert</span><span class="cv-t-sound">How far a voice carries</span></h2></div>
+          <h2 class="co-title"><span class="cv-t-hear">Who must hear the alert</span><span class="cv-t-sound">How far a voice carries</span><span class="cv-t-rounds">A year of crew rounds</span></h2></div>
         <div class="co-stepbar">${stepBar(step)}</div>
       </header>
       <div class="cv-body"></div>
@@ -45,7 +46,7 @@ export function mount(host, step = 'hear') {
   render();
 }
 export function setStep(step) {
-  if (!root || !['hear', 'sound'].includes(step)) return;
+  if (!root || !['hear', 'sound', 'rounds'].includes(step)) return;
   S.step = step;
   $('.cv').dataset.step = step;
   $('.co-stepbar').innerHTML = stepBar(step);
@@ -54,7 +55,15 @@ export function setStep(step) {
 }
 export function refit() { if (root) render(); }
 
-function render() { fill($('.cv-body'), S.step === 'sound' ? soundStep() : hearStep()); }
+function render() {
+  if (S.step === 'rounds') { roundsPage(); return; }
+  fill($('.cv-body'), S.step === 'sound' ? soundStep() : hearStep());
+}
+async function roundsPage() {
+  if (!$('.cv-body .rd')) fill($('.cv-body'), el('p', { class: 'cv-note', text: 'Loading the routes…' }));
+  const [R, geo, cov] = await Promise.all([roundsData(), geoData(), coverageData()]);
+  if (S.step === 'rounds') fill($('.cv-body'), roundsStep({ R, geo, cov, render }));
+}
 
 // ---------- the radius a village speaker reaches, for the scale check (base values, design case) ----------
 function designRadius(bands = {}) {
