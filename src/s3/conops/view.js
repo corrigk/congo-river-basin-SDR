@@ -429,6 +429,8 @@ function buildKit() {
       el('h3', { class: 'co-h', text: 'How crews work' }),
       check('hubs', 'Minor hubs: rangers stay a few nights and work the speakers around them', null),
       K.hubs ? [tDay, slider('Working days per stay', 'workDays', 1, 7, 1, 'days')] : el('p', { class: 'co-note', text: 'Major hubs only: every speaker is worked on day trips of up to 8 h; speakers beyond that are left out.' }),
+      check('seasons', 'Seasons: rains slow roads and forest paths, low water slows boats', null),
+      K.seasons ? check('planSeasons', 'Plan routine trips for the easy months (repairs cannot wait)', null) : null,
       el('h3', { class: 'co-h', text: 'Major hub (crews live here)' }),
       pick('main', 'building', 'building', 'Building'), pick('main', 'tower', 'tower', 'Tower'), pick('main', 'speaker', 'speaker', 'Hub loudspeaker'), pick('main', 'radio', 'radio', 'Ranger radios'), pick('main', 'backhaul', 'backhaul', 'Internet (upload / download)'),
       el('p', { class: 'co-note', text: `Always: S-3 responder terminal, medical and spares kit, solar sized to the loads, a boat or motorbikes per crew, and what the access adds.` }),
@@ -463,6 +465,7 @@ function renderKit() {
     [fmt(P.avgCrews, 2), `crews per major hub on average (up to ${S.kit.crews})`], [`${fmt(P.power.pvKwp, 1)} kWp`, `solar · ${fmt(P.power.battKwh)} kWh battery`],
     ...(P.hubs ? [[fmt(P.staysYr), `stays a year, ${fmt(P.daysPerStay, 1)} days each`], [P.spec.minorMastM ? `${fmt(P.spec.minorRelayKm, 1)} km` : 'none', `minor-hub relay (${P.spec.minorMastM || 0} m)`]]
       : [[fmt(P.unserved), 'speakers beyond 8 h, left out'], [fmt(P.dayRoundsYr), 'day rounds a year']]),
+    ...(S.kit.seasons ? [[`+${fmt((P.F.stayR - 1) * 100)}% / +${fmt((P.F.stayRep - 1) * 100)}%`, `trip time from the seasons: routine stays${S.kit.planSeasons ? ' (planned)' : ''} / repairs`]] : []),
   ].map(([b, t]) => el('div', {}, el('b', { text: b }), el('span', { text: t }))));
 
   // the ranger setups, with the speakers fixed

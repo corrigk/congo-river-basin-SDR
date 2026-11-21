@@ -92,3 +92,4 @@
 .rd-load b { font-family: var(--display); font-style: italic; font-weight: 900; font-size: 24px; color: var(--good); font-variant-numeric: tabular-nums; }
 .rd-load.is-over { border-color: var(--critical); background: color-mix(in srgb, var(--critical) 7%, transparent); }
 .rd-load.is-over b { color: var(--critical); }
+.rd-season { display: flex !important; flex-direction: column; gap: 1px; padding-bottom: 4px; margin-bottom: 2px; border-bottom: 1px solid var(--line); }

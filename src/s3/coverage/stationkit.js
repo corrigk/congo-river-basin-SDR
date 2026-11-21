@@ -18,10 +18,32 @@
 //                  allowances, caretaker stipends) are shown on their own line and counted only when switched on.
 // Catalog: analysis/data/station_kit.json (every figure labelled srr / published / estimate).
 import KIT from '../../../analysis/data/station_kit.json' with { type: 'json' };
+import SEASONS from '../../../analysis/data/seasons.json' with { type: 'json' };
 import { PHYS, physFor, relayBudget } from '../../sdr/physics.js';
 import { rangeTo, value } from './acoustics.js';
 
-export { KIT };
+export { KIT, SEASONS };
+
+// ----- seasons: rains slow unpaved roads and forest paths, low water slows boats (analysis/data/seasons.json) -----
+export const zoneOf = lat => (lat >= 2 ? 'north' : lat <= -2 ? 'south' : 'equator');
+// Travel-time multiplier for one mode in one zone and month (1 = dry-season speed).
+export function seasonMult(zone, month, mode) {
+  const Z = SEASONS.zones[zone], E = SEASONS.effects[mode], level = mode === 'boat' ? Z.low[month] : Z.wet[month];
+  return 1 / (1 - (1 - E.speed_at_full) * level);
+}
+// Average multiplier over a trip mix {boat, road, foot}: over all months, or (planned) the easiest plan_months.
+function mixMult(zone, mix, planned) {
+  const m = SEASONS.months.map((_, k) => Object.entries(mix).reduce((a, [mode, s]) => a + s * seasonMult(zone, k, mode), 0)).sort((a, b) => a - b);
+  const take = planned ? m.slice(0, SEASONS.plan_months) : m;
+  return take.reduce((a, v) => a + v, 0) / take.length;
+}
+// The design's seasonal factors on trip time, weighted over zones by places (hubs.json trip_modes).
+export function seasonFactors(kit, modes) {
+  if (!kit.seasons || !modes) return { stayR: 1, stayRep: 1, dayR: 1, dayRep: 1 };
+  const zs = Object.entries(modes), w = zs.reduce((a, [, z]) => a + z.places, 0) || 1;
+  const avg = (kind, planned) => zs.reduce((a, [zone, z]) => a + (z.places / w) * mixMult(zone, z[kind], planned), 0);
+  return { stayR: avg('stay', kit.planSeasons), stayRep: avg('stay', false), dayR: avg('day', kit.planSeasons), dayRep: avg('day', false) };
+}
 const LIFE = 15, TYPES = ['road', 'river', 'remote'];
 export const LOGISTICS = KIT.access.logistics;
 // The station design's current settings, shared with the crew-rounds page (set by the Design map view).
@@ -34,7 +56,7 @@ export const DEFAULT_KIT = () => ({
   building: 'prefab', tower: 'lattice30', speaker: 'array', radio: 'repeater', backhaul: 'starlink',
   minorBuilding: 'shelter', minorMast: 'pole9', minorBackhaul: 'none', caretaker: false,
   crews: b('crew', 'crews'), people: b('crew', 'people'), days: b('crew', 'field_days'), team: b('crew', 'team'), dayH: b('crew', 'day_h'),
-  routine: b('visits', 'routine_yr'), repair: b('visits', 'repair_yr'), onsite: b('visits', 'onsite_h'), perRound: b('visits', 'per_round'), faultWait: b('visits', 'fault_wait_d'),
+  routine: b('visits', 'routine_yr'), repair: b('visits', 'repair_yr'), onsite: b('visits', 'onsite_h'), perRound: b('visits', 'per_round'), faultWait: b('visits', 'fault_wait_d'), seasons: true, planSeasons: true,
   workDays: b('stay', 'work_days'), tDay: b('stay', 't_day_h'), hubs: true,
   fuelUsdL: b('crew', 'fuel_usd_l'), motorShare: b('crew', 'motor_share'), countPeople: false,
 });
@@ -77,16 +99,17 @@ function power(kit) {
 // every place crews stay at gets the routine stays its speakers need (at least one a year), plus repair trips for the
 // faults no stay picks up within the wait allowed (one trip takes the faults arriving in the wait). Caretakers halve
 // the routine visits and the faults that need a crew (simple repairs). Same formula: hubs_from_speakers.py need().
-function workload(kit, r, row, speakers) {
+// F: seasonal factors on trip time (routine trips can be planned for the easy months, repairs cannot).
+function workload(kit, r, row, speakers, F = { stayR: 1, stayRep: 1, dayR: 1, dayRep: 1 }) {
   const W = kit.faultWait, cr = kit.caretaker ? 0.5 : 1, vR = kit.routine * cr, rep = kit.repair * cr, dh = kit.dayH;
   const dayN = r.s * speakers;
-  const perD = (kit.routine * (kit.onsite + (2 * r.td) / kit.perRound) + rep * (kit.onsite + (2 * r.td) / Math.max(1, kit.perRound / 2))) / dh;
+  const perD = (kit.routine * (kit.onsite + (2 * r.td * F.dayR) / kit.perRound) + rep * (kit.onsite + (2 * r.td * F.dayRep) / Math.max(1, kit.perRound / 2))) / dh;
   let routineStays = 0, repairTrips = 0, stayDays = 0, travelH = 0, stayVisits = 0;
   for (const [c, sp, T, tl] of row?.stay_bins || []) {
-    const perStay = (kit.workDays * dh) / (kit.onsite + (2 * tl) / kit.perRound), nR = vR > 0 ? Math.ceil((sp * vR) / perStay) : 0;
+    const perStay = (kit.workDays * dh) / (kit.onsite + (2 * tl * F.stayR) / kit.perRound), nR = vR > 0 ? Math.ceil((sp * vR) / perStay) : 0;
     const lr = sp * rep * (1 - Math.min(1, (nR * W) / 365)), m = lr / (1 + (lr * W) / 365);
-    routineStays += c * nR; repairTrips += c * m; stayDays += c * (nR * ((2 * T) / dh + kit.workDays) + m * ((2 * T) / dh + 1));
-    travelH += c * (nR + m) * 2 * T; stayVisits += c * sp * (vR + rep);
+    routineStays += c * nR; repairTrips += c * m; stayDays += c * (nR * ((2 * T * F.stayR) / dh + kit.workDays) + m * ((2 * T * F.stayRep) / dh + 1));
+    travelH += c * (nR * F.stayR + m * F.stayRep) * 2 * T; stayVisits += c * sp * (vR + rep);
   }
   const need = dayN * perD + stayDays, cap = (kit.crews * kit.people * kit.days) / kit.team;
   return { perD, cap, need, routineStays, repairTrips, stayDays, travelH, stayVisits, dayN, X: cap / (need / speakers) };
@@ -98,7 +121,8 @@ export function evaluateKit(kit, cov) {
   const H = cov.hubs, rows = H.sweep[String(kit.tDay)], speakers = H.speakers;
   const at = X => ({ s: interp(rows, X, 'share_direct'), td: interp(rows, X, 't_direct_h'), tdep: interp(rows, X, 't_dep_h'), tl: interp(rows, X, 't_loc_h') });
   let X = 500, r = at(X), w;
-  for (let i = 0; i < 8; i++) { w = workload(kit, r, nearestRow(rows, X), speakers); X = Math.max(50, w.X); r = at(X); }
+  const F = seasonFactors(kit, H.trip_modes);
+  for (let i = 0; i < 8; i++) { w = workload(kit, r, nearestRow(rows, X), speakers, F); X = Math.max(50, w.X); r = at(X); }
   X = Math.floor(X);
   const nMajor = Math.max(1, Math.round(interp(rows, X, 'majors'))), nMinor = Math.round(interp(rows, X, 'minors')), nVillage = Math.round(interp(rows, X, 'village_stays'));
   const mShare = shares(rows, X, 'major_types'), nShare = shares(rows, X, 'minor_types');
@@ -156,7 +180,7 @@ export function evaluateKit(kit, cov) {
   const relay = relayBudget(physFor({}), tw.height_m), minorRelay = mm.height_m ? relayBudget(physFor({}), mm.height_m) : { km: 0 };
   const spkM = sp.db ? rangeTo(value('ambient_night_dba') + value('margin_db'), { L0: sp.db, D: value('d_land_db'), airDbKm: value('air_db_km'), forestDb100: value('forest_db_100m'), clearingM: value('clearing_m') }) : 0;
   return {
-    hubs: true, X, w, r, tDay: kit.tDay, nMajor, nMain: nMajor, crews, avgCrews, nMinor, nVillage, types, mtypes, speakers, perMajor: speakers / nMajor,
+    hubs: true, X, w, r, F, tDay: kit.tDay, nMajor, nMain: nMajor, crews, avgCrews, nMinor, nVillage, types, mtypes, speakers, perMajor: speakers / nMajor,
     staysYr, routineStays: w.routineStays, repairTrips: w.repairTrips, daysPerStay, perStay, rangers, rangerNights, nightsPerRanger: rangerNights / rangers, dayRoundsYr, unserved: 0,
     parts, fixedCapex, power: pw, byType, majorTotal, avgMajor15: majorTotal / nMajor,
     minorParts, minorCapex0, minorByType, minorTotal, avgMinor15: nMinor ? minorTotal / nMinor : 0,
@@ -170,7 +194,7 @@ export function evaluateKit(kit, cov) {
 function evaluateDayTrips(kit, cov) {
   const st = cov.stations, rows = st.sweep[String(st.T_maint_h)];
   let X = st.X, td = 0;
-  for (let i = 0; i < 6; i++) { td = interp(rows, X, 'mean_trip_h'); X = workload({ ...kit, caretaker: false }, { s: 1, td }, null, st.assigned).X; }
+  for (let i = 0; i < 6; i++) { td = interp(rows, X, 'mean_trip_h'); X = workload({ ...kit, caretaker: false }, { s: 1, td }, null, st.assigned, seasonFactors(kit, cov.hubs?.trip_modes)).X; }
   X = Math.max(20, Math.floor(X));
   const nMajor = Math.max(1, Math.round(interp(rows, X, 'stations'))), unserved = Math.round(interp(rows, X, 'unassigned'));
   const types = { road: 0, river: 0, remote: 0 };

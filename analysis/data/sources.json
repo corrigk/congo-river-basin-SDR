@@ -172,6 +172,14 @@
   "eth_canopy_2020": {
    "title": "ETH Global Canopy Height 2020, 10 m (Lang et al. 2023, Nature Ecology & Evolution), CC BY 4.0: pilot canopy",
    "url": "https://langnico.github.io/globalcanopyheight/"
+  },
+  "seasons_washington2013": {
+   "title": "Washington, R. et al. (2013) Congo Basin rainfall climatology: can we believe the climate models? Phil. Trans. R. Soc. B 368: 20120296 (seasons, estimate)",
+   "url": "https://doi.org/10.1098/rstb.2012.0296"
+  },
+  "seasons_alsdorf2016": {
+   "title": "Alsdorf, D. et al. (2016) Opportunities for hydrologic research in the Congo Basin. Reviews of Geophysics 54: 378-409 (river regimes, estimate)",
+   "url": "https://doi.org/10.1002/2016RG000517"
   }
  }
 }

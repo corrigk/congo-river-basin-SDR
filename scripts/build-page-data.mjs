@@ -82,7 +82,7 @@ if (spk && sts) {
       list: sts.stations.map(s => [r(s.lon, 3), r(s.lat, 3), s.type, s.n_speakers, s.max_travel_h, s.mean_travel_h]) },
     hubs: hubs && { speakers: hubs.speakers, t_local_h: hubs.t_local_h, t_day_h: hubs.t_day_h, t_days: hubs.t_days, min_minor: hubs.min_minor,
       min_remote: hubs.min_remote, service_hubs: hubs.service_hubs, sweep: hubs.sweep, default: hubs.default,
-      majors: hubs.majors, minors: hubs.minors, village_stays: hubs.village_stays },
+      majors: hubs.majors, minors: hubs.minors, village_stays: hubs.village_stays, trip_modes: hubs.trip_modes },
   });
 }
 

@@ -172,7 +172,7 @@ def summarise(hubs, M, chunks, unassigned):
     }, minors
 
 
-def x_from(sweep, kit):
+def x_from(sweep, kit, F=None):
     """The page's formula (stationkit.js), on the sweep: a few fixed-point steps because the trips depend on X."""
     def interp(X, key):
         xs = [r["X"] for r in sweep]
@@ -186,24 +186,43 @@ def x_from(sweep, kit):
     X = 500
     for _ in range(8):
         row = min(sweep, key=lambda r: abs(math.log(r["X"] / X)))
-        X = cap / need(row, interp(X, "share_direct"), interp(X, "t_direct_h"), kit)
+        X = cap / need(row, interp(X, "share_direct"), interp(X, "t_direct_h"), kit, F)
     return int(X)
 
 
-def need(row, s, td, kit):
+SEASONS = load("seasons.json")
+
+
+def season_factors(modes, planned=True):
+    """Same as stationkit.js seasonFactors(): multipliers on trip time, weighted over zones by places."""
+    def mult(zone, k, mode):
+        Z, E = SEASONS["zones"][zone], SEASONS["effects"][mode]
+        lv = Z["low"][k] if mode == "boat" else Z["wet"][k]
+        return 1 / (1 - (1 - E["speed_at_full"]) * lv)
+    def mix(zone, m, plan):
+        v = sorted(sum(sh * mult(zone, k, mode) for mode, sh in m.items()) for k in range(12))
+        v = v[:SEASONS["plan_months"]] if plan else v
+        return sum(v) / len(v)
+    w = sum(z["places"] for z in modes.values()) or 1
+    avg = lambda kind, plan: sum(z["places"] / w * mix(zn, z[kind], plan) for zn, z in modes.items())
+    return {"stayR": avg("stay", planned), "stayRep": avg("stay", False), "dayR": avg("day", planned), "dayRep": avg("day", False)}
+
+
+def need(row, s, td, kit, F=None):
     """Team-days a year per speaker, counting whole trips per place (stationkit.js, same formula):
     day trips: routine visits shared over a round, repairs over half a round;
     stays: each place at least one routine stay a year (its speakers' visits), plus repair trips for faults that
     no stay picks up within the wait allowed (faults batch: one trip takes those arriving in the wait)."""
+    F = F or {"stayR": 1, "stayRep": 1, "dayR": 1, "dayRep": 1}   # seasons: trip-time factors (season_factors)
     W, cr = kit["fault_wait"], 0.5 if kit["caretaker"] else 1
     vR, rep, dh = kit["routine"] * cr, kit["repair"] * cr, kit["day_h"]
-    direct = s * (kit["routine"] * (kit["onsite"] + 2 * td / kit["perRound"]) + rep * (kit["onsite"] + 2 * td / max(1, kit["perRound"] / 2))) / dh
+    direct = s * (kit["routine"] * (kit["onsite"] + 2 * td * F["dayR"] / kit["perRound"]) + rep * (kit["onsite"] + 2 * td * F["dayRep"] / max(1, kit["perRound"] / 2))) / dh
     tot = 0.0
     for c, sp, T_, tl in row["stay_bins"]:
-        per_stay = kit["work_days"] * dh / (kit["onsite"] + 2 * tl / kit["perRound"])
+        per_stay = kit["work_days"] * dh / (kit["onsite"] + 2 * tl * F["stayR"] / kit["perRound"])
         nR = math.ceil(sp * vR / per_stay) if vR > 0 else 0
         lr = sp * rep * (1 - min(1, nR * W / 365)); m = lr / (1 + lr * W / 365)
-        tot += c * (nR * (2 * T_ / dh + kit["work_days"]) + m * (2 * T_ / dh + 1))
+        tot += c * (nR * (2 * T_ * F["stayR"] / dh + kit["work_days"]) + m * (2 * T_ * F["stayRep"] / dh + 1))
     return direct + tot / row["assigned"]
 
 
@@ -230,7 +249,12 @@ def main():
            "day_h": b("crew", "day_h"), "routine": b("visits", "routine_yr"), "repair": b("visits", "repair_yr"), "onsite": b("visits", "onsite_h"),
            "perRound": b("visits", "per_round"), "work_days": b("stay", "work_days"), "fault_wait": b("visits", "fault_wait_d"), "caretaker": False}
     td0 = int(T_DAY / 60)
-    X = x_from(sweeps[str(td0)], kit)
+    # seasons (seasons.json): the trip-time factors depend on the design's trip mix, so: design, mix, factors, design
+    X0 = x_from(sweeps[str(td0)], kit)
+    M0, ch0, _ = majors(hubs, X0, *RR[td0])
+    F = season_factors(rounds_routes.trip_modes(M0, ch0, hubs, T_LOCAL))
+    X = x_from(sweeps[str(td0)], kit, F)
+    print(f"seasons: trip time x{F['stayR']:.2f} (routine stays, planned) / x{F['stayRep']:.2f} (repairs); X {X0} -> {X}")
     T_DAY_RUN[0] = td0 * 60
     M, ch, un = majors(hubs, X, *RR[td0])
     s, minors = summarise(hubs, M, ch, un)
@@ -245,6 +269,7 @@ def main():
         "_method": __doc__.strip(),
         "t_local_h": T_LOCAL / 60, "min_minor": MIN_MINOR, "min_remote": MIN_REMOTE, "t_day_h": td0, "service_hubs": len(hubs), "speakers": int(t1.sum()),
         "t_days": T_DAYS, "sweep": sweeps, "default": {"X": X, "kit": kit, **s},
+        "trip_modes": rounds_routes.trip_modes(M, ch, hubs, T_LOCAL),   # seasons: boat / road / foot share of trip time, by zone
         "majors": [[round(float(T.lon[k]), 3), round(float(T.lat[k]), 3), str(T.stype[k]), int(round(mj_sp[j]))] for j, (k, _) in enumerate(M)],
         "minors": [[round(float(T.lon[hubs[i][0]]), 3), round(float(T.lat[hubs[i][0]]), 3), str(T.stype[hubs[i][0]]), int(round(hubs[i][1])),
                     first_major[i][0], round(first_major[i][1] / 60, 1)] for i in minors],

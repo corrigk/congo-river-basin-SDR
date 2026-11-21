@@ -290,22 +290,33 @@ subscriptions and rent; battery swaps; vehicle replacement; fuel for the motoris
 minor hubs, local rounds). People costs are shown, not counted: salaries ($3k a ranger a year), field allowances ($10 a
 ranger a night away) and caretaker stipends; a switch counts the allowances and stipends.
 
-**Ranger setups compared (default kit, recalibrated):**
+**Seasons** (`analysis/data/seasons.json`, an estimate by latitude zone to verify with CHIRPS monthly rainfall and
+gauge records; after Washington et al. 2013 and Alsdorf et al. 2016). North of 2°N one rainy season (about April to
+October), south of 2°S one (about October/November to April), near the equator two rainier peaks; rivers run low when
+their catchment's dry season has drained them (north about February to April, south about August to October). At
+their height the rains halve unpaved-road speed and slow forest paths to three quarters; low water slows boats to 70%.
+`hubs_from_speakers.py` measures the design's trip mix (stay trips are 74-84% on foot, by zone) and both the page and
+the script turn it into factors on trip time: routine trips planned for each route's six easiest months take 8% longer
+than in the dry season, repairs (which cannot wait for the season) 21% longer. The default capacity falls from 761 to
+708 speakers per major hub. Switches on the station page: seasons on or off, planning on or off.
+
+**Ranger setups compared (default kit, recalibrated, seasons on and planned):**
 
 | Setup | Major | Minor + village stays | Rangers | Nights away / ranger / yr | 15 yr |
 | --- | --- | --- | --- | --- | --- |
-| Major hubs only, day trips | 839 | none | 2,517 | 0 | $429M, 23,413 speakers left out |
-| Minor hubs, one day out (8 h, 2 working days) | 1,000 | 2,035 + 4,545 | 3,348 | 53 | $664M |
-| **Minor hubs, a long day out (12 h, 3 days): default** | **791** | **2,238 + 4,682** | **2,799** | **80** | **$577M** |
-| Few major hubs, two days out (24 h, 5 days) | 490 | 2,408 + 4,797 | 2,433 | 165 | $492M |
-| Default + caretakers (checks and simple repairs) + rented rooms | 748 | 2,230 + 4,689 | 2,574 | 60 | $528M |
+| Major hubs only, day trips | 844 | none | 2,532 | 0 | $432M, 23,413 speakers left out |
+| Minor hubs, one day out (8 h, 2 working days) | 1,003 | 2,038 + 4,545 | 3,360 | 57 | $670M |
+| **Minor hubs, a long day out (12 h, 3 days): default** | **802** | **2,243 + 4,683** | **2,916** | **82** | **$588M** |
+| Few major hubs, two days out (24 h, 5 days) | 525 | 2,410 + 4,798 | 2,607 | 170 | $527M |
+| Default + caretakers (checks and simple repairs) + rented rooms | 757 | 2,232 + 4,687 | 2,604 | 64 | $537M |
 
+Without seasons the default is $577M (791 major hubs, 2,799 rangers).
 Before the recalibration the default was $521M with 730 major hubs and 2,448 rangers, and two days out $320M: averaging
 the work over speakers hid that every small place needs its own trip and that faults far out need repair trips.
 
 What it says: minor hubs reach every speaker, but they save money only when the major hubs can be fewer, which needs
 longer trips out; the price is rangers' time away (165 nights a year at two days out, most of their field days).
-Caretakers who do simple repairs are the best lever on the default: fewer repair trips, $49M less, 20 fewer nights
+Caretakers who do simple repairs are the best lever on the default: fewer repair trips, $51M less, 18 fewer nights
 away a ranger, for $30 a month each. The major-hub kit is the other lever (containers, a lighter mast, no hub
 loudspeaker). The old "main station + waypoint post" design ($212M) assumed 24 h circuits with $16.5k posts and no
 village stays; this one replaces it.
@@ -336,4 +347,11 @@ The cost model averaged the work over speakers; at real places every small minor
 year and faults far out need trips of their own. The cost model now counts whole trips per place (see Crews above), so
 the crew numbers rose (2,448 to 2,799 rangers by default) and the showcase hubs of the recalibrated design run at 72%
 to 99% of their duty days with repairs waiting a median of 22 to 38 days. The page's settings (fault wait, caretakers,
-extra crews) change both. Seasons are not in yet.
+extra crews, seasons) change both.
+
+**Seasons in the rounds.** Each route's minutes by mode are slowed by the month the trip starts in (the major hub's
+zone); planned, routine stays go in the route's six easiest months. The calendar shows the rains and low water above
+the teams, and "Right now" the season and the speed of roads, paths and boats. With the default settings the seasons
+add 15 to 24% to the showcase hubs' travel; planning helps less in the simulation than in the cost model, because
+packing the routine stays into half the year pushes some of them into the harder months. The road showcase hub (716
+speakers, 28 places) runs at 125% of its duty days: one hub can need more than the design's average crews.

@@ -38,6 +38,13 @@ step keeping the one before it faintly and animating the links in. Speakers come
 (`site_speakers.py`, hazard-first rollout), stations from the speakers (`stations_from_speakers.py`), and the network
 step uses those stations. Stage 3 (GRID3) replaces the proxy with no page change.
 
+## Seasons, 2026-11-21
+
+Rains slow unpaved roads and forest paths, low water slows boats, by latitude zone (seasons.json, estimate). Routine
+trips can be planned for the easy months, repairs cannot: trip time +8% (routine, planned) and +21% (repairs). The
+default hub design is now 802 major + 2,243 minor hubs, 2,916 rangers, $588M. The crew rounds show the seasons on the
+calendar and in the teams' travel.
+
 ## Crew rounds, 2026-11-20
 
 New Design page "Crew rounds" (from What's at a station): a year of three showcase major hubs (river, road, remote)

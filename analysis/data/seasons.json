@@ -1,0 +1,27 @@
+{
+ "_note": "Seasons for crew travel (Design tab: What's at a station, Crew rounds). ESTIMATE: a coarse monthly calendar per latitude zone from the basin's known climate, to verify with CHIRPS monthly rainfall and gauge records. The basin straddles the equator: one rainy season north of about 2 N (roughly April to October), one south of about 2 S (roughly October/November to April), and two rainier peaks with no real dry season in between (March to May, September to November). Rivers run low when their catchment's dry season has drained them: northern rivers (Ubangi, Uele) about February to April, southern ones (Kasai, Lualaba, Luapula) about August to October.",
+ "sources": [
+  "Washington, R. et al. (2013) Congo Basin rainfall climatology: can we believe the climate models? Phil. Trans. R. Soc. B 368: 20120296",
+  "Alsdorf, D. et al. (2016) Opportunities for hydrologic research in the Congo Basin. Reviews of Geophysics 54: 378-409"
+ ],
+ "basis": "estimate",
+ "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+ "zones": {
+  "north": {"label": "North of 2 N", "lat_min": 2, "lat_max": 99,
+   "wet": [0, 0, 0.3, 0.6, 1, 1, 1, 1, 1, 1, 0.5, 0],
+   "low": [0.5, 1, 1, 1, 0.5, 0, 0, 0, 0, 0, 0, 0.2]},
+  "equator": {"label": "2 S to 2 N", "lat_min": -2, "lat_max": 2,
+   "wet": [0.4, 0.4, 0.8, 1, 0.8, 0.3, 0.3, 0.4, 0.8, 1, 1, 0.6],
+   "low": [0.3, 0.5, 0.5, 0.2, 0, 0.2, 0.5, 0.5, 0.2, 0, 0, 0.2]},
+  "south": {"label": "South of 2 S", "lat_min": -99, "lat_max": -2,
+   "wet": [1, 1, 1, 0.6, 0.2, 0, 0, 0, 0.2, 0.5, 1, 1],
+   "low": [0, 0, 0, 0, 0, 0.3, 0.5, 1, 1, 1, 0.5, 0]}
+ },
+ "effects": {
+  "road": {"label": "Unpaved roads in the rains", "speed_at_full": 0.5, "note": "Mud, washed-out bridges: half speed in the wettest months (estimate)"},
+  "foot": {"label": "Forest paths in the rains", "speed_at_full": 0.75, "note": "Swollen streams and flooded forest (estimate)"},
+  "boat": {"label": "Rivers at low water", "speed_at_full": 0.7, "note": "Sandbars and narrow channels; small tributaries become hard to pass (estimate)"}
+ },
+ "plan_months": 6,
+ "plan_note": "With planning, routine trips go in the six easiest months for each hub's route mix; repairs cannot wait for the season"
+}

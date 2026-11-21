@@ -28,6 +28,31 @@ def route(pred, dist, src, dst):
     return [[*LL(c), MODE(c), round(float(dist[c]))] for c in path]
 
 
+def zone(lat):
+    return "north" if lat >= 2 else "south" if lat <= -2 else "equator"
+
+
+def trip_modes(M, chunks, hubs, t_local):
+    """For seasons: per latitude zone of the major hub, how the travel minutes of its trips split between boat, road
+    and foot (stays: major to minor hub; day trips: major to the area), with the number of places as weight."""
+    out = {z: {"stay": {"boat": 0.0, "road": 0.0, "foot": 0.0}, "day": {"boat": 0.0, "road": 0.0, "foot": 0.0}, "places": 0} for z in ("north", "equator", "south")}
+    by_major = {}
+    for m, i, sp, t in chunks: by_major.setdefault(m, set()).add((i, t > t_local))
+    for m, places in by_major.items():
+        k = int(M[m][0]); z = out[zone(float(T.lat[k]))]
+        dist, pred = dijkstra(T.G, indices=k, return_predecessors=True, limit=36 * 60)
+        for i, stay in places:
+            c = hubs[i][0]; kind = "stay" if stay else "day"
+            while c != k and pred[c] >= 0:
+                p = int(pred[c]); z[kind][MODE(c)] += float(dist[c] - dist[p]); c = p
+            z["places"] += 1
+    for z in out.values():
+        for kind in ("stay", "day"):
+            s = sum(z[kind].values()) or 1
+            z[kind] = {m: round(v / s, 3) for m, v in z[kind].items()}
+    return out
+
+
 def export(M, chunks, hubs, hub_of, t1, t_local, min_minor, max_places=30):
     by_major = {}
     for m, i, sp, t in chunks:
