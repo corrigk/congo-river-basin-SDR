@@ -164,6 +164,14 @@
   "grid3_cod_v4": {
    "title": "GRID3 COD Settlement Extents v4.0 (CIESIN / GRID3, 2026), CC BY-SA 4.0: settlement blocks and building counts for the DRC",
    "url": "https://academiccommons.columbia.edu/doi/10.7916/bb5b-9b79"
+  },
+  "copernicus_glo30": {
+   "title": "Copernicus GLO-30 Digital Surface Model (ESA / Airbus), tile N00 E018, AWS open data: pilot terrain",
+   "url": "https://registry.opendata.aws/copernicus-dem/"
+  },
+  "eth_canopy_2020": {
+   "title": "ETH Global Canopy Height 2020, 10 m (Lang et al. 2023, Nature Ecology & Evolution), CC BY 4.0: pilot canopy",
+   "url": "https://langnico.github.io/globalcanopyheight/"
   }
  }
 }

@@ -24,7 +24,8 @@ before it faintly on the map and animates the new layer in, so the links are vis
 | Chain on the map (speakers → stations → network) | done |
 | What's at a station (station design) | done |
 | 3: settlements (GRID3, DRC) and speaker siting on real villages | done |
-| 3: pilot terrain and canopy profiles (Copernicus DEM, ETH canopy); other countries' settlements | next |
+| 3: pilot terrain and canopy profiles (Copernicus DEM, ETH canopy) | done |
+| 3: other countries' settlements (GRID3 COG, Open Buildings) | next |
 | 2: existing infrastructure; 4: gap classes, travel grid, ranger reach | after 3 |
 | 5: sensor risk map; 6: Trades integration, offline, run-through | after |
 
@@ -101,10 +102,38 @@ open ground, 4.5 km along a river; **372–889 m** into forest across the range.
 forest takes it within a few hundred metres: **one speaker covers one village, not a region**, and riverside speakers
 carry much farther along the water.
 
-Not yet modelled: terrain shadowing (up to 20 dB when the line of sight is blocked) and the real canopy height along
-each path. Both need the Copernicus GLO-30 surface model and the ETH canopy-height map (pilot tiles, Stage 3), which
-also give the per-bearing sound profiles. Speech intelligibility (STI) is a test-phase item; the level-based proxy
-stands in for SDR.
+Speech intelligibility (STI) is a test-phase item; the level-based proxy stands in for SDR.
+
+### Real terrain and canopy: the Mbandaka pilot (Stage 3, part 2)
+
+`analysis/scripts/fetch_pilot.py` reads two windows (18.0–18.7°E, 0.0–0.6°N) with HTTP range requests, so only the
+window's bytes are transferred: the Copernicus GLO-30 surface model (ESA / Airbus, tile N00 E018, AWS open data;
+15.6 MB saved) and the ETH Global Canopy Height 2020 map (Lang et al. 2023, CC BY 4.0, 10 m; 7.3 MB saved). Both go to
+`analysis/raw/pilot/` (not committed).
+
+`analysis/scripts/pilot_profiles.py` sites the pilot's speakers exactly as basin-wide (GRID3 blocks, 2041, urban-centre
+blocks left to phones and radio): **148 speakers reach 107k of the 124k people** outside Mbandaka's urban centre
+(288k more inside it). It profiles 12 of them, spread at least 5 km apart and most-heard first, along 12 bearings every
+20 m to 2 km:
+
+- **ground** = surface model minus canopy height, smoothed with a 300 m running median (**modeled proxy**: the two
+  datasets disagree by several metres cell to cell, which on flat land is noise); canopy top = ground + canopy height;
+- the straight path from the speaker on its 12 m mast to a listener 1.5 m up; **forest loss** = 6.6 dB per 100 m of
+  that path below the canopy top where the canopy is over 3 m; **barrier** 10 dB where the ground blocks the line
+  (FEMA: up to 20), ignoring the listener's last 60 m;
+- the level as in the flat model; **heard to** = the first point it drops below 65 dB (night).
+
+Result (base values): heard to a **median of 360 m** (280–1,380 m over 144 bearings), against 534 m in the flat model.
+Most pilot villages sit under or right against tall trees in the 10 m canopy map (village trees and palms count), so
+the forest starts at the speaker rather than 300 m out; bearings over the river or open swamp carry to 1–1.4 km. The
+page recomputes the levels from the sliders: with 1.9 dB per 100 m of forest (French Guiana) the median is 660 m
+against 798 m flat. The geometry (ground, canopy, metres of path under the canopy, ground in the way) is fixed per
+bearing in `analysis/data/profiles_pilot.json`.
+
+What it means for the design: the basin-wide siting uses the flat 534 m radius, which these profiles say is
+optimistic for villages under the canopy. That is why the pilot plan measures exactly this (12 bearings at 100, 300,
+600 and 1,000 m, day and night) before the radius is fixed; until then the 372–889 m range stands, and a 360 m radius
+sits near the range's low case (372 m with a 50-person cutoff: 355k speakers, 81.7% heard).
 
 ## The scale check
 
@@ -155,7 +184,7 @@ people per building (DRC households average about 5). Built-up blocks hold 34.6M
 10.8M.
 
 **Speakers.** `analysis/scripts/site_speakers.py`. In the DRC a speaker covers every block whose centre is within its
-voice radius (534 m at night out of a 300 m clearing; terrain comes with the pilot DEM); built-up blocks larger than one
+voice radius (534 m at night out of a 300 m clearing; the pilot's real-terrain profiles below give a median of 360 m); built-up blocks larger than one
 speaker's area get several; greedy maximum coverage places the speaker reaching the most people still uncovered, down to
 150 people. Blocks left over get a receiver each (at least 10 people; one per 500 beyond), and people outside the mapped
 settlements one per 500. Outside the DRC (24% of the basin's people) the WorldPop proxy stays until those countries'

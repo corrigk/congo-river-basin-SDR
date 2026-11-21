@@ -38,6 +38,12 @@ step keeping the one before it faintly and animating the links in. Speakers come
 (`site_speakers.py`, hazard-first rollout), stations from the speakers (`stations_from_speakers.py`), and the network
 step uses those stations. Stage 3 (GRID3) replaces the proxy with no page change.
 
+## Stage 3 (part 2): real terrain in the pilot, 2026-11-20
+
+Copernicus GLO-30 and ETH canopy height read as windows over Mbandaka; 12 pilot speakers × 12 bearings profiled
+(`pilot_profiles.py`). Heard to a median of 360 m against 534 m flat: villages sit against the trees. Shown on "How far
+a voice carries" as a footprint compass and a bearing profile that follow the sliders.
+
 ## Stage 3 (part 1) and the station design, 2026-11-20
 
 GRID3 settlements (DRC) replace the speaker proxy: 147k speakers reach 77% of rural and peri-urban people (proxy: 235k,

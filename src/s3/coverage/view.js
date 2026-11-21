@@ -9,6 +9,7 @@ import { reqBy } from '../content.js';
 import { stepBar } from '../steps.js';
 import { level, rangeTo, threshold, paths, briefTable, value, PARAMS, CASES, areaKm2 } from './acoustics.js';
 import URB from '../../../analysis/data/urbanisation.json' with { type: 'json' };
+import PROF from '../../../analysis/data/profiles_pilot.json' with { type: 'json' };
 import '../v2/v2.css';
 import '../conops/conops.css';
 import '../../sdr/sdr.css'; // shared controls: sliders, chips, buttons, legends
@@ -23,6 +24,7 @@ const S = {
   step: 'hear',
   spk: 't1', L0: value('src_t1_db'), caseId: 'night', ambient: value('ambient_night_dba'),
   dLand: value('d_land_db'), dWater: value('d_water_db'), air: value('air_db_km'), forest: value('forest_db_100m'), clearing: value('clearing_m'),
+  pSpk: 0, pBrg: 0, // the pilot's real-terrain profile: which speaker and bearing
 };
 let root = null;
 const $ = s => root.querySelector(s);
@@ -148,7 +150,7 @@ function draftsCard() {
 function soundStep() {
   const P = paths(S), thr = thrNow();
   const R = Object.fromEntries(Object.entries(P).map(([k, o]) => [k, rangeTo(thr, o)]));
-  return el('div', { class: 'cv-sound' }, controls(), el('div', { class: 'cv-main' }, profileCard(P.village, thr, R.village), curveCard(P, thr, R)),
+  return el('div', { class: 'cv-sound' }, controls(), el('div', { class: 'cv-main' }, profileCard(P.village, thr, R.village), terrainCard(thr, R.village), curveCard(P, thr, R)),
     el('div', { class: 'cv-side' }, resultsCard(R, thr), checkCard()));
 }
 const thrNow = () => S.ambient + value('margin_db') + (S.caseId === 'indoor' ? value('building_open_db') : 0);
@@ -209,8 +211,105 @@ function profileCard(o, thr, r) {
   hit.addEventListener('pointermove', ev => { const b = s.getBoundingClientRect(), m = Math.max(0, ((((ev.clientX - b.left) / b.width) * W - l) / (W - l - rr)) * max); const v = level(m, o); showTip(ev, [el('b', { text: `${fmt(m)} m: ${fmt(v, 1)} dB` }), el('div', { class: 'k', text: v >= thr ? 'heard' : `${fmt(thr - v, 1)} dB short` })]); });
   hit.addEventListener('pointerleave', hideTip);
   return chartBlock('cv-profile', 'Sound profile: out of a village, into the forest', el('div', {}, s,
-    el('p', { class: 'cv-note' }, `Once the voice leaves the clearing, the forest takes ${S.forest} dB every 100 m. Flat ground for now; the real profile over the Copernicus DEM and canopy height comes in Stage 3.`)),
+    el('p', { class: 'cv-note' }, `Once the voice leaves the clearing, the forest takes ${S.forest} dB every 100 m. Flat ground and a clean clearing: the real terrain and canopy around Mbandaka are below.`)),
   [['Distance (m)', 'Level (dB)', 'Heard'], ...[50, 100, 200, 300, 400, 500, 750, 1000, 1500].map(m => [String(m), fmt(level(m, o), 1), level(m, o) >= thr ? 'yes' : 'no'])]);
+}
+
+// ---------- the real terrain: 12 pilot speakers around Mbandaka, 12 bearings each (analysis/scripts/pilot_profiles.py) ----------
+// The geometry (ground, canopy, metres of the path under the canopy, ground in the way) is fixed; the levels are
+// recomputed here from the sliders, so the footprint answers to the same settings as the flat model above.
+const BAR_DB = PROF.params.barrier_db;
+function bearingLevels(b) {
+  const L0 = S.L0, D = S.dLand, air = S.air, f = S.forest, r0 = PROF.r0_m;
+  return b.forest_path_m.map((fp, i) => { const r = (i + 1) * PROF.step_m; return L0 - D * Math.log2(r / r0) - (air * (r - r0)) / 1000 - (f * fp) / 100 - (b.blocked[i] ? BAR_DB : 0); });
+}
+function heardTo(lv, thr) { const i = lv.findIndex(v => v < thr); return i < 0 ? PROF.max_m : i * PROF.step_m; }
+const median = a => { const b = [...a].sort((x, y) => x - y), n = b.length; return n % 2 ? b[(n - 1) / 2] : (b[n / 2 - 1] + b[n / 2]) / 2; };
+
+function terrainCard(thr, flatR) {
+  const spk = PROF.speakers[S.pSpk], brg = spk.bearings[S.pBrg];
+  const heard = spk.bearings.map(b => heardTo(bearingLevels(b), thr));
+  const all = PROF.speakers.flatMap(s => s.bearings.map(b => heardTo(bearingLevels(b), thr)));
+  const lv = bearingLevels(brg), hb = heard[S.pBrg];
+  const pickSpk = el('div', { class: 'sd-num' }, el('div', { class: 'sd-num-h' }, el('span', { text: 'Pilot speaker' }), el('b', { text: `reaches ${fmt(spk.heard_people)} people` })),
+    seg(PROF.speakers.map((_, i) => [i, String(i + 1)]), S.pSpk, v => { S.pSpk = v; render(); }, 'Pilot speaker'));
+  const pickBrg = el('div', { class: 'sd-num' }, el('div', { class: 'sd-num-h' }, el('span', { text: 'Bearing (or click the compass)' }), el('b', { text: `${brg.deg}°` })),
+    seg(spk.bearings.map((b, i) => [i, `${b.deg}`]), S.pBrg, v => { S.pBrg = v; render(); }, 'Bearing'));
+  const med = median(all);
+  const sum = el('p', { class: 'cv-key' }, `Over the real ground and canopy the ${PROF.speakers.length} pilot speakers are heard to a median of ${fmt(med)} m (${fmt(Math.min(...all))}–${fmt(Math.max(...all))} m over ${all.length} bearings), against ${fmt(flatR)} m on flat ground with a ${S.clearing} m clearing. `,
+    med < flatR ? 'Most of these villages sit under or right against the trees, so the forest starts at the speaker; open water and fields carry it further.' : 'Open ground and water around these villages carry the voice further than the flat model.');
+  const rows = [['Bearing', 'Heard to (m)', 'Forest along the bearing', 'Ground in the way from (m)'],
+    ...spk.bearings.map((b, i) => { const k = b.blocked.indexOf(1); return [`${b.deg}°`, fmt(heard[i]), `${Math.round(b.forest_share * 100)}%`, k < 0 ? 'never' : fmt((k + 1) * PROF.step_m)]; })];
+  return chartBlock('cv-terrain', `Real terrain: the ${PROF.pilot.name} pilot`, el('div', {},
+    el('div', { class: 'cv-terr-pick' }, pickSpk, pickBrg),
+    el('div', { class: 'cv-terr' }, compass(spk, heard, flatR), terrProfile(brg, lv, thr, hb, spk)),
+    sum,
+    el('p', { class: 'cv-note' }, tag('Sourced', 'baseline'), ` Terrain: Copernicus GLO-30 surface model; canopy: ETH Global Canopy Height 2020 (10 m); villages: GRID3 blocks. Speaker ${S.pSpk + 1} at ${spk.lon.toFixed(3)}°E ${spk.lat.toFixed(3)}°N on a ${spk.mast_m} m mast, listener 1.5 m up. `,
+      tag('Modeled proxy', 'proxy'), ` Bare ground = surface model minus canopy height, smoothed over 300 m; where the ground blocks the line the voice loses ${BAR_DB} dB more. The pilot area has ${fmt(PROF.pilot_speakers)} speakers for ${fmt(PROF.pilot_people)} people outside Mbandaka's urban centre (${fmt(PROF.pilot_urban_people)} more inside it, on phones and radio first).`)),
+  rows);
+}
+
+// The footprint: how far the voice carries on each of the 12 bearings, against the flat model's circle.
+function compass(spk, heard, flatR) {
+  const W = 260, c = W / 2, R = c - 22, max = PROF.max_m, k = R / max;
+  const s = sv('svg', { viewBox: `0 0 ${W} ${W}`, class: 'vsvg cv-compass', role: 'img', 'aria-label': `Footprint of pilot speaker ${S.pSpk + 1}: heard ${fmt(Math.min(...heard))} to ${fmt(Math.max(...heard))} m` });
+  for (const m of [500, 1000, 1500, 2000]) { sv('circle', { cx: c, cy: c, r: m * k, class: 'sd-grid', fill: 'none' }, s); svText(s, { x: c + 3, y: c - m * k + 11, class: 'sub' }, m >= 1000 ? `${m / 1000} km` : `${m} m`); }
+  sv('circle', { cx: c, cy: c, r: Math.min(flatR, max) * k, class: 'cv-flat' }, s);
+  const xy = (deg, m) => [c + Math.sin((deg * Math.PI) / 180) * m * k, c - Math.cos((deg * Math.PI) / 180) * m * k];
+  sv('polygon', { points: spk.bearings.map((b, i) => xy(b.deg, heard[i]).map(v => v.toFixed(1)).join(',')).join(' '), class: 'cv-foot' }, s);
+  spk.bearings.forEach((b, i) => {
+    const [x, y] = xy(b.deg, max), [hx, hy] = xy(b.deg, heard[i]), on = i === S.pBrg;
+    sv('line', { x1: c, y1: c, x2: x, y2: y, class: on ? 'cv-spoke is-on' : 'cv-spoke' }, s);
+    sv('circle', { cx: hx, cy: hy, r: on ? 5 : 3.2, class: on ? 'cv-hpt is-on' : 'cv-hpt' }, s);
+    if (b.deg % 90 === 0) { const [lx, ly] = xy(b.deg, max + 150); svText(s, { x: lx, y: ly + 4, 'text-anchor': 'middle', class: 'lbl' }, ['N', 'E', 'S', 'W'][b.deg / 90]); }
+    const hit = sv('line', { x1: c, y1: c, x2: x, y2: y, stroke: 'transparent', 'stroke-width': 16, style: 'cursor:pointer' }, s);
+    hit.addEventListener('click', () => { S.pBrg = i; hideTip(); render(); });
+    hit.addEventListener('pointermove', ev => showTip(ev, [el('b', { text: `${b.deg}°: heard to ${fmt(heard[i])} m` }), el('div', { class: 'k', text: `canopy over 3 m on ${Math.round(b.forest_share * 100)}% of the bearing` })]));
+    hit.addEventListener('pointerleave', hideTip);
+  });
+  sv('circle', { cx: c, cy: c, r: 4, class: 'cv-hub' }, s);
+  return el('div', { class: 'cv-compass-w' }, s, el('div', { class: 'sd-legend' },
+    el('span', {}, el('i', { style: 'background:var(--good)' }), 'heard, real terrain'),
+    el('span', {}, el('i', { class: 'cv-lg-flat' }), `flat model ${fmt(flatR)} m`)));
+}
+
+// One bearing: the ground, the canopy and the speaker on its mast (lower panel), the level along it (upper panel).
+function terrProfile(b, lv, thr, hb, spk) {
+  const W = 520, H = 300, l = 40, rr = 10, top = 12, mid = 150, gTop = 176, bot = 270, max = PROF.max_m, n = lv.length;
+  const X = m => l + (m / max) * (W - l - rr);
+  const yMin = 30, yMax = Math.max(S.L0 - 10, 100), Y = v => mid - ((Math.max(yMin, Math.min(yMax, v)) - yMin) / (yMax - yMin)) * (mid - top);
+  const gr = b.ground_m, tops = gr.map((g, i) => g + b.canopy_m[i]);
+  const zLo = Math.min(0, ...gr) - 2, zHi = Math.max(spk.mast_m, ...tops) + 2, Z = z => bot - ((z - zLo) / (zHi - zLo)) * (bot - gTop);
+  const s = sv('svg', { viewBox: `0 0 ${W} ${H}`, class: 'vsvg cv-prof', role: 'img', 'aria-label': `Bearing ${b.deg}°: heard to ${fmt(hb)} m over the real ground and canopy` });
+  for (let v = 40; v <= yMax; v += 20) { sv('line', { x1: l, x2: W - rr, y1: Y(v), y2: Y(v), class: 'sd-grid' }, s); svText(s, { x: l - 4, y: Y(v) + 4, 'text-anchor': 'end', class: 'sub' }, `${v}`); }
+  svText(s, { x: 0, y: 10, class: 'sub' }, 'dB');
+  const dist = i => (i + 1) * PROF.step_m;
+  // canopy (ground to canopy top), the ground line, the mast and the straight path to the edge of hearing
+  let cp = `M${X(0)},${Z(0)}`;
+  tops.forEach((t, i) => { cp += `L${X(dist(i)).toFixed(1)},${Z(t).toFixed(1)}`; });
+  for (let i = n - 1; i >= 0; i--) cp += `L${X(dist(i)).toFixed(1)},${Z(gr[i]).toFixed(1)}`;
+  sv('path', { d: cp + 'Z', class: 'cv-canopy' }, s);
+  sv('path', { d: `M${X(0)},${Z(0)}` + gr.map((g, i) => `L${X(dist(i)).toFixed(1)},${Z(g).toFixed(1)}`).join(''), class: 'cv-ground' }, s);
+  sv('line', { x1: X(0), x2: X(0), y1: Z(0), y2: Z(spk.mast_m), class: 'cv-mast' }, s);
+  sv('path', { d: `M${X(0)},${Z(spk.mast_m) - 2}l9,-5v10z`, class: 'cv-spk' }, s);
+  if (hb > 0) { const i = Math.min(n - 1, Math.round(hb / PROF.step_m) - 1); sv('line', { x1: X(0), y1: Z(spk.mast_m), x2: X(hb), y2: Z(gr[i] + 1.5), class: 'cv-path' }, s); }
+  svText(s, { x: W - rr, y: gTop - 6, 'text-anchor': 'end', class: 'sub' }, `ground and canopy, ${fmt(zLo, 0)} to ${fmt(zHi, 0)} m from the speaker's ground`);
+  sv('line', { x1: l, x2: W - rr, y1: bot, y2: bot, class: 'sd-axis' }, s);
+  for (let m = 0; m <= max; m += 500) svText(s, { x: X(m), y: bot + 14, 'text-anchor': 'middle', class: 'sub' }, m >= 1000 ? `${m / 1000} km` : `${m} m`);
+  // the level along the bearing, green where it is heard
+  const line = (pred, cls) => { let d = '', on = false; lv.forEach((v, i) => { if (pred(v)) { d += `${on ? 'L' : 'M'}${X(dist(i)).toFixed(1)},${Y(v).toFixed(1)}`; on = true; } else on = false; }); sv('path', { d, class: cls }, s); };
+  line(v => v >= thr, 'cv-heard'); line(v => v < thr, 'cv-not'); // a ground shadow can drop the level below and let it come back further out
+  sv('line', { x1: l, x2: W - rr, y1: Y(thr), y2: Y(thr), class: 'sd-cap' }, s);
+  svText(s, { x: W - rr - 2, y: Y(thr) - 5, 'text-anchor': 'end', class: 'lbl' }, `heard above ${thr} dB`);
+  if (hb > 0 && hb < max) { sv('line', { x1: X(hb), x2: X(hb), y1: top, y2: bot, class: 'cv-r' }, s); svText(s, { x: X(hb) + 4, y: top + 12, class: 'lbl' }, `${fmt(hb)} m`); }
+  const hit = sv('rect', { x: l, y: top, width: W - l - rr, height: bot - top, fill: 'transparent' }, s);
+  hit.addEventListener('pointermove', ev => {
+    const bb = s.getBoundingClientRect(), m = ((((ev.clientX - bb.left) / bb.width) * W - l) / (W - l - rr)) * max, i = Math.max(0, Math.min(n - 1, Math.round(m / PROF.step_m) - 1));
+    showTip(ev, [el('b', { text: `${fmt(dist(i))} m: ${fmt(lv[i], 1)} dB` }), el('div', { class: 'k', text: lv[i] >= thr ? 'heard' : `${fmt(thr - lv[i], 1)} dB short` }),
+      el('div', { class: 'k', text: `canopy ${b.canopy_m[i]} m; ${fmt(b.forest_path_m[i])} m of the path under it${b.blocked[i] ? '; ground in the way' : ''}` })]);
+  });
+  hit.addEventListener('pointerleave', hideTip);
+  return s;
 }
 
 function curveCard(P, thr, R) {

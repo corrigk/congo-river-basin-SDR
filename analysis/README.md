@@ -38,6 +38,8 @@ $PY -I scripts/build_hazards.py                           # conflict, fire and f
 $PY -I scripts/build_urbanisation.py                      # urban centres / peri-urban / rural (Degree of Urbanisation) for the Design tab
 $PY scripts/build_settlements.py                          # GRID3 DRC settlement blocks -> raw/grid3/blocks.npz (needs the GeoPackage below)
 $PY scripts/site_speakers.py                              # village speakers and receivers on real settlements (DRC), proxy elsewhere; hazard-first rollout
+$PY scripts/fetch_pilot.py                                # Mbandaka pilot windows of Copernicus GLO-30 and ETH canopy height -> raw/pilot/ (range requests)
+$PY scripts/pilot_profiles.py                             # 12 pilot speakers x 12 bearings over real terrain and canopy -> data/profiles_pilot.json
 $PY scripts/stations_from_speakers.py                     # ranger stations derived from the speakers (X per station, 8 h trips)
 ```
 
