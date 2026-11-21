@@ -46,6 +46,11 @@ for (const b of ['high', 'base', 'low']) console.log(`  ${b.padEnd(4)}: voice ${
 console.log(`  rollout: first tenth mean hazard ${SP.rollout.first_tenth_mean_hazard} vs ${SP.rollout.all_mean_hazard} for all speakers`);
 console.log(`  by year: ${Object.entries(SP.by_year).map(([y, v]) => `${y} ${v.t1.toLocaleString('en-US')}`).join(', ')}`);
 
+const HB = read('analysis/data/hubs.json');
+console.log(`\n== Major and minor ranger hubs (hubs_from_speakers.py): ${HB.service_hubs.toLocaleString('en-US')} day-trip areas of ${HB.t_local_h} h`);
+for (const [td, rows] of Object.entries(HB.sweep)) { const r0 = rows.find(r => r.X >= HB.default.X) || rows.at(-1); console.log(`  ${td.padStart(2)} h to a minor hub, X ${r0.X}: ${r0.majors} major (${Object.entries(r0.major_types).map(([t, n]) => `${t} ${n}`).join(', ')}), ${r0.minors} minor + ${r0.village_stays} village stays; day trips ${Math.round(r0.share_direct * 100)}%`); }
+console.log(`  default (${HB.t_day_h} h): X ${HB.default.X}, ${HB.default.majors} major + ${HB.default.minors} minor hubs; major hubs reach ${HB.runs['2041'].stations.at(-1).cum_pct}% by radio or a 1-hour response`);
+
 console.log('\n== Ranger stations derived from the speakers (stations_from_speakers.py)');
 console.log(`  X = ${SS.X} speakers per station (${Object.entries(SS.x_formula).map(([k, v]) => `${k} ${v}`).join(', ')}), longest trip ${SS.T_maint_h} h`);
 console.log(`  ${SS.stations.length.toLocaleString('en-US')} stations at ${SS.sites} sites; ${SS.assigned.toLocaleString('en-US')} speakers assigned, ${SS.unassigned.toLocaleString('en-US')} beyond reach; SRR sweet spot ${SS.compare.srr_sweet_spot}`);

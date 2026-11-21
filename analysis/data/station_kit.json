@@ -1,54 +1,438 @@
 {
-  "_note": "What is at a ranger station and a waypoint post, and what crews cost to run (Design tab, 'What's at a station'). basis: 'srr' = the SRR cost model's station item (an assumption set itself); 'published' = a public figure with its source; 'estimate' = ours, reasoning given. Replace with quotes. Salaries are left out of the total (team rule) and shown on their own line.",
-  "main": {
-    "building": { "label": "Building", "options": [
-      { "id": "prefab", "name": "Prefab station, about 60 m²: ops room, storage, bunks for 6", "usd": 55000, "basis": "srr" },
-      { "id": "container", "name": "Two 20 ft containers: office and bunks for 4", "usd": 24000, "basis": "estimate" },
-      { "id": "shared", "name": "Shared with an existing ranger post or partner (rent)", "usd": 0, "opex_yr": 1200, "basis": "estimate" } ] },
-    "tower": { "label": "Tower (relay and loudspeaker height)", "options": [
-      { "id": "lattice30", "name": "30 m self-supporting lattice", "usd": 45000, "height_m": 30, "basis": "srr" },
-      { "id": "guyed24", "name": "24 m guyed mast", "usd": 22000, "height_m": 24, "basis": "estimate" },
-      { "id": "mast12", "name": "12 m mast", "usd": 6000, "height_m": 12, "basis": "estimate" } ] },
-    "speaker": { "label": "Station loudspeaker (T0)", "options": [
-      { "id": "array", "name": "3.2 kW voice array, about 124 dB at 100 ft", "usd": 30000, "watts": 3200, "db": 124, "basis": "srr" },
-      { "id": "voice", "name": "600 W voice speaker, about 116 dB", "usd": 8000, "watts": 600, "db": 116, "basis": "estimate" },
-      { "id": "none", "name": "None (village speakers carry the alerts)", "usd": 0, "watts": 0, "db": 0, "basis": "estimate" } ] },
-    "radio": { "label": "Ranger radios", "options": [
-      { "id": "repeater", "name": "VHF repeater + 10 handhelds", "usd": 12000, "watts": 15, "basis": "srr" },
-      { "id": "handhelds", "name": "10 handhelds, no repeater", "usd": 3000, "watts": 3, "basis": "estimate" } ] },
-    "backhaul": { "label": "Backhaul (upload / download)", "options": [
-      { "id": "starlink", "name": "Starlink Standard", "usd": 389, "opex_yr": 600, "down_mbps": 100, "up_mbps": 15, "watts": 60, "basis": "published", "note": "Kit and $50/month in DRC (SRR sources); speeds are Starlink's typical residential range (25-220 down, 5-20 up), not a guarantee" },
-      { "id": "vsat", "name": "Ku-band VSAT, 1.2 m", "usd": 3500, "opex_yr": 3600, "down_mbps": 10, "up_mbps": 2, "watts": 45, "basis": "estimate" },
-      { "id": "none", "name": "None: S-3 terminal only", "usd": 0, "opex_yr": 0, "down_mbps": 0, "up_mbps": 0.005, "watts": 0, "basis": "estimate" } ] },
-    "terminal": { "label": "S-3 responder terminal (S3-08)", "usd": 3000, "basis": "srr" },
-    "kit": { "label": "Medical cache, water purification, sensor spares, charging", "usd": 14500, "basis": "srr" }
+ "_note": "What is at a major hub (where crews live) and a minor hub (where one or two rangers stay a night or two), how that differs by access, and what crews cost to run (Design tab, 'What's at a station'). basis: 'srr' = the SRR cost model's station item (an assumption set itself); 'published' = a public figure with its source; 'estimate' = ours, reasoning given. Replace with quotes. Salaries, field allowances and caretaker stipends are people costs: shown on their own line, not counted unless switched on (team rule).",
+ "main": {
+  "building": {
+   "label": "Building",
+   "options": [
+    {
+     "id": "prefab",
+     "name": "Prefab station, about 60 m²: ops room, storage, bunks for 6",
+     "usd": 55000,
+     "basis": "srr"
+    },
+    {
+     "id": "container",
+     "name": "Two 20 ft containers: office and bunks for 4",
+     "usd": 24000,
+     "basis": "estimate"
+    },
+    {
+     "id": "shared",
+     "name": "Shared with an existing ranger post or partner (rent)",
+     "usd": 0,
+     "opex_yr": 1200,
+     "basis": "estimate"
+    }
+   ]
   },
-  "crew": {
-    "crews": { "label": "Crews per station", "base": 2, "basis": "estimate" },
-    "people": { "label": "People per crew", "base": 3, "basis": "estimate" },
-    "hours_yr": { "label": "Working hours per crew a year", "base": 1600, "basis": "estimate", "note": "About 200 field days of 8 h" },
-    "salary_usd_yr": { "label": "Loaded cost per person a year (shown, not counted)", "base": 3000, "basis": "estimate", "note": "Local ranger pay; the Trades operations-staff estimate is $30k for network engineers" },
-    "boat": { "label": "Boat + 40 hp outboard (river sites)", "usd": 18000, "life_yr": 6, "fuel_l_per_km": 0.6, "speed_kmh": 25, "basis": "srr", "note": "Price from the SRR access kit; life and fuel use are estimates" },
-    "moto": { "label": "Two motorbikes (road and remote sites)", "usd": 6000, "life_yr": 5, "fuel_l_per_km": 0.035, "speed_kmh": 30, "basis": "srr" },
-    "fuel_usd_l": { "label": "Fuel price", "base": 1.7, "low": 1.2, "high": 2.2, "basis": "estimate" },
-    "motor_share": { "label": "Share of trip time under motor (the rest on foot)", "base": 0.5, "basis": "estimate", "note": "Trips mix boat or motorbike legs with walking to speakers off the river or road" }
+  "tower": {
+   "label": "Tower (relay and loudspeaker height)",
+   "options": [
+    {
+     "id": "lattice30",
+     "name": "30 m self-supporting lattice",
+     "usd": 45000,
+     "height_m": 30,
+     "basis": "srr"
+    },
+    {
+     "id": "guyed24",
+     "name": "24 m guyed mast",
+     "usd": 22000,
+     "height_m": 24,
+     "basis": "estimate"
+    },
+    {
+     "id": "mast12",
+     "name": "12 m mast",
+     "usd": 6000,
+     "height_m": 12,
+     "basis": "estimate"
+    }
+   ]
   },
-  "visits": {
-    "routine_yr": { "label": "Routine visits per speaker a year", "base": 1, "basis": "estimate" },
-    "repair_yr": { "label": "Repair visits per speaker a year (faults)", "base": 0.3, "basis": "estimate", "note": "With health telemetry (TD-AUD-03) crews go only when a speaker reports a fault or misses its test" },
-    "onsite_h": { "label": "Hours on site per visit", "base": 1.5, "basis": "estimate" },
-    "per_round": { "label": "Speakers visited per round (one trip)", "base": 6, "basis": "estimate", "note": "A crew strings nearby speakers into one round" }
+  "speaker": {
+   "label": "Station loudspeaker (T0)",
+   "options": [
+    {
+     "id": "array",
+     "name": "3.2 kW voice array, about 124 dB at 100 ft",
+     "usd": 30000,
+     "watts": 3200,
+     "db": 124,
+     "basis": "srr"
+    },
+    {
+     "id": "voice",
+     "name": "600 W voice speaker, about 116 dB",
+     "usd": 8000,
+     "watts": 600,
+     "db": 116,
+     "basis": "estimate"
+    },
+    {
+     "id": "none",
+     "name": "None (village speakers carry the alerts)",
+     "usd": 0,
+     "watts": 0,
+     "db": 0,
+     "basis": "estimate"
+    }
+   ]
   },
-  "post": {
-    "label": "Waypoint post: where crews stop on longer rounds (spares locker, shelter, relay, charging)",
-    "items": [
-      { "name": "15 m mast", "usd": 8000, "basis": "estimate" },
-      { "name": "Small solar + battery (300 W, 2 kWh)", "usd": 3000, "basis": "estimate" },
-      { "name": "Relay radio and S-3 terminal", "usd": 1500, "basis": "estimate" },
-      { "name": "Locked shelter for spares and an overnight stop", "usd": 4000, "basis": "estimate" } ],
-    "opex_yr": 200,
-    "round_h": 24,
-    "note": "With posts, crews run circuits of up to 24 h (overnighting at posts) instead of 8 h day trips, so fewer main stations reach every speaker"
+  "radio": {
+   "label": "Ranger radios",
+   "options": [
+    {
+     "id": "repeater",
+     "name": "VHF repeater + 10 handhelds",
+     "usd": 12000,
+     "watts": 15,
+     "basis": "srr"
+    },
+    {
+     "id": "handhelds",
+     "name": "10 handhelds, no repeater",
+     "usd": 3000,
+     "watts": 3,
+     "basis": "estimate"
+    }
+   ]
   },
-  "opex": { "maintenance_pct_yr": 0.06, "basis": "srr" }
+  "backhaul": {
+   "label": "Backhaul (upload / download)",
+   "options": [
+    {
+     "id": "starlink",
+     "name": "Starlink Standard",
+     "usd": 389,
+     "opex_yr": 600,
+     "down_mbps": 100,
+     "up_mbps": 15,
+     "watts": 60,
+     "basis": "published",
+     "note": "Kit and $50/month in DRC (SRR sources); speeds are Starlink's typical residential range (25-220 down, 5-20 up), not a guarantee"
+    },
+    {
+     "id": "vsat",
+     "name": "Ku-band VSAT, 1.2 m",
+     "usd": 3500,
+     "opex_yr": 3600,
+     "down_mbps": 10,
+     "up_mbps": 2,
+     "watts": 45,
+     "basis": "estimate"
+    },
+    {
+     "id": "none",
+     "name": "None: S-3 terminal only",
+     "usd": 0,
+     "opex_yr": 0,
+     "down_mbps": 0,
+     "up_mbps": 0.005,
+     "watts": 0,
+     "basis": "estimate"
+    }
+   ]
+  },
+  "terminal": {
+   "label": "S-3 responder terminal (S3-08)",
+   "usd": 3000,
+   "basis": "srr"
+  },
+  "kit": {
+   "label": "Medical cache, water purification, sensor spares, charging",
+   "usd": 14500,
+   "basis": "srr"
+  }
+ },
+ "crew": {
+  "crews": {
+   "label": "Most crews at a major hub",
+   "base": 2,
+   "basis": "estimate",
+   "note": "Each major hub gets the crews its speakers need, up to this"
+  },
+  "people": {
+   "label": "People per crew",
+   "base": 3,
+   "basis": "estimate"
+  },
+  "salary_usd_yr": {
+   "label": "Loaded cost per person a year (shown, not counted)",
+   "base": 3000,
+   "basis": "estimate",
+   "note": "Local ranger pay; the Trades operations-staff estimate is $30k for network engineers"
+  },
+  "boat": {
+   "label": "Boat + 40 hp outboard (river sites)",
+   "usd": 18000,
+   "life_yr": 6,
+   "fuel_l_per_km": 0.6,
+   "speed_kmh": 25,
+   "basis": "srr",
+   "note": "Price from the SRR access kit; life and fuel use are estimates"
+  },
+  "moto": {
+   "label": "Two motorbikes (road and remote sites)",
+   "usd": 6000,
+   "life_yr": 5,
+   "fuel_l_per_km": 0.035,
+   "speed_kmh": 30,
+   "basis": "srr"
+  },
+  "fuel_usd_l": {
+   "label": "Fuel price",
+   "base": 1.7,
+   "low": 1.2,
+   "high": 2.2,
+   "basis": "estimate"
+  },
+  "motor_share": {
+   "label": "Share of trip time under motor (the rest on foot)",
+   "base": 0.5,
+   "basis": "estimate",
+   "note": "Trips mix boat or motorbike legs with walking to speakers off the river or road"
+  },
+  "field_days": {
+   "label": "Field days per ranger a year",
+   "base": 200,
+   "basis": "estimate",
+   "note": "About 1,600 working hours; leave, training and admin take the rest"
+  },
+  "team": {
+   "label": "Rangers per team in the field",
+   "base": 2,
+   "basis": "estimate",
+   "note": "Two for safety on the river and in the forest"
+  },
+  "day_h": {
+   "label": "Working hours in a field day",
+   "base": 9,
+   "basis": "estimate"
+  }
+ },
+ "visits": {
+  "routine_yr": {
+   "label": "Routine visits per speaker a year",
+   "base": 1,
+   "basis": "estimate"
+  },
+  "repair_yr": {
+   "label": "Repair visits per speaker a year (faults)",
+   "base": 0.3,
+   "basis": "estimate",
+   "note": "With health telemetry (TD-AUD-03) crews go only when a speaker reports a fault or misses its test"
+  },
+  "onsite_h": {
+   "label": "Hours on site per visit",
+   "base": 1.5,
+   "basis": "estimate"
+  },
+  "per_round": {
+   "label": "Speakers visited per round (one trip)",
+   "base": 6,
+   "basis": "estimate",
+   "note": "A crew strings nearby speakers into one round"
+  }
+ },
+ "opex": {
+  "maintenance_pct_yr": 0.06,
+  "basis": "srr"
+ },
+ "stay": {
+  "work_days": {
+   "label": "Working days per stay at a minor hub",
+   "base": 3,
+   "basis": "estimate",
+   "note": "Three working days at the hub; travel days come on top"
+  },
+  "allowance_usd_night": {
+   "label": "Field allowance per ranger per night away",
+   "base": 10,
+   "basis": "estimate",
+   "note": "Local per diem; a people cost like salaries"
+  },
+  "t_local_h": {
+   "label": "Day trip from a hub (one way, longest)",
+   "base": 3,
+   "basis": "estimate",
+   "note": "Speakers within 3 h of a hub are visited on day trips from it"
+  },
+  "t_day_h": {
+   "label": "Longest trip from a major hub to its minor hubs",
+   "base": 12,
+   "basis": "estimate",
+   "note": "8 h: one day's travel; 12 h: a long day (default: the middle of the cost and time-away trade); 24 h: two days, with a night on the way",
+   "options": [
+    8,
+    12,
+    24
+   ]
+  }
+ },
+ "minor": {
+  "label": "Minor hub: an outstation where one or two rangers stay a night or two and work the speakers around it",
+  "building": {
+   "label": "Shelter",
+   "options": [
+    {
+     "id": "shelter",
+     "name": "Built shelter: 2 bunks, locked store, water filter",
+     "usd": 6000,
+     "basis": "estimate"
+    },
+    {
+     "id": "container",
+     "name": "One 20 ft container: 2 bunks and store",
+     "usd": 12000,
+     "basis": "estimate"
+    },
+    {
+     "id": "rented",
+     "name": "Rented room at a health centre, school or mission",
+     "usd": 1000,
+     "opex_yr": 600,
+     "basis": "estimate",
+     "note": "Fit-out $1k, rent $50 a month"
+    }
+   ]
+  },
+  "mast": {
+   "label": "Relay mast",
+   "options": [
+    {
+     "id": "mast15",
+     "name": "15 m mast + relay radio",
+     "usd": 9500,
+     "height_m": 15,
+     "basis": "estimate"
+    },
+    {
+     "id": "pole9",
+     "name": "9 m pole + relay radio",
+     "usd": 4000,
+     "height_m": 9,
+     "basis": "estimate"
+    },
+    {
+     "id": "none",
+     "name": "No relay (handhelds only)",
+     "usd": 0,
+     "height_m": 0,
+     "basis": "estimate"
+    }
+   ]
+  },
+  "backhaul": {
+   "label": "Internet",
+   "options": [
+    {
+     "id": "none",
+     "name": "None: S-3 terminal only",
+     "usd": 0,
+     "opex_yr": 0,
+     "basis": "estimate"
+    },
+    {
+     "id": "mini",
+     "name": "Starlink Mini",
+     "usd": 300,
+     "opex_yr": 600,
+     "watts": 25,
+     "basis": "published",
+     "note": "Kit price and a $50 monthly plan; check DRC availability"
+    }
+   ]
+  },
+  "fixed": [
+   {
+    "name": "S-3 responder terminal",
+    "usd": 1500,
+    "basis": "estimate"
+   },
+   {
+    "name": "Solar 400 W + 3 kWh battery",
+    "usd": 3500,
+    "basis": "estimate"
+   },
+   {
+    "name": "First aid, spares cache, charging",
+    "usd": 2500,
+    "basis": "estimate"
+   }
+  ],
+  "caretaker": {
+   "label": "Village caretaker at each minor hub (stipend)",
+   "usd_yr": 360,
+   "basis": "estimate",
+   "note": "$30 a month: keeps the hub, checks nearby speakers after each monthly test; assumed to halve the crews' routine visits"
+  },
+  "battery_life_yr": 8
+ },
+ "access": {
+  "_note": "What changes with the site's access (road, river, remote). Logistics multipliers are the SRR's (cost to haul and build).",
+  "logistics": {
+   "road": 1.15,
+   "river": 1.3,
+   "remote": 1.6
+  },
+  "major": {
+   "road": [
+    {
+     "name": "Fuel store and motorbike shed",
+     "usd": 3000,
+     "basis": "estimate"
+    }
+   ],
+   "river": [
+    {
+     "name": "Mooring, boat shed and fuel store",
+     "usd": 9000,
+     "basis": "estimate"
+    },
+    {
+     "name": "Raised floor above flood level",
+     "usd": 12000,
+     "basis": "estimate",
+     "note": "The river rises several metres in the wet season"
+    }
+   ],
+   "remote": [
+    {
+     "name": "Six months of spares on site",
+     "usd": 6000,
+     "basis": "estimate"
+    },
+    {
+     "name": "Two more days of battery",
+     "usd": 4000,
+     "basis": "estimate",
+     "note": "Resupply is rare"
+    }
+   ]
+  },
+  "minor": {
+   "road": [],
+   "river": [
+    {
+     "name": "Mooring and raised floor",
+     "usd": 4000,
+     "basis": "estimate"
+    }
+   ],
+   "remote": [
+    {
+     "name": "Bigger spares cache and battery",
+     "usd": 3000,
+     "basis": "estimate"
+    }
+   ]
+  },
+  "how": {
+   "road": "Motorbikes; roads can close in the rainy season",
+   "river": "Boat and outboard; fuel is the biggest running cost; sound and radio carry farther over water",
+   "remote": "On foot or by canoe; everything carried in, longer stays because travel is the cost"
+  }
+ }
 }

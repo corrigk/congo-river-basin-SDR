@@ -9,7 +9,7 @@ import { evaluate, sweetSpot, LEO_SIZES, ASSUME, TODAY, todayReach, compareToday
 import { createConopsMap, FAMILY, familyOf } from './map.js';
 import { GAP } from '../content.js';
 import { stepBar } from '../steps.js';
-import { evaluateKit, DEFAULT_KIT, KIT } from '../coverage/stationkit.js';
+import { evaluateKit, evaluateSetups, DEFAULT_KIT, KIT } from '../coverage/stationkit.js';
 import '../v2/v2.css';
 import './conops.css';
 
@@ -56,17 +56,19 @@ async function loadYear() {
   spot = sweetSpot(st.runs[S.mode]);
   S.kitPlan = evaluateKit(S.kit, G.cov);
   baseKit = evaluateKit(DEFAULT_KIT(), G.cov);
-  if (S.n == null) S.n = S.mode === 'alerts' ? S.kitPlan.nMain : spot.knee;
+  if (S.n == null) S.n = S.mode === 'alerts' ? hubN(S.kitPlan, st) : spot.knee;
   const b = DESIGN();
-  base = evaluate(D, st, { ...b, n: b.mode === 'alerts' ? baseKit.nMain : spot.knee, year: S.year, dbNodes: BEST(4), ...kitCost(baseKit, baseKit.nMain) });
+  base = evaluate(D, st, { ...b, n: b.mode === 'alerts' ? hubN(baseKit, st) : spot.knee, year: S.year, dbNodes: BEST(4), ...kitCost(baseKit) });
 }
-const opts = () => ({ ...S, dbNodes: S.nodes, ...(S.mode === 'alerts' && S.kitPlan ? kitCost(S.kitPlan, S.n) : {}) });
-// In the Speakers mode the station line is the station design: each main station at its access type's 15-year cost,
-// plus the waypoint posts (Design tab, "What's at a station").
-function kitCost(P, n) {
+const opts = () => ({ ...S, dbNodes: S.nodes, ...(S.mode === 'alerts' && S.kitPlan ? kitCost(S.kitPlan) : {}) });
+// The network step's stations are the major hubs, in the order of the derivation's run (default design): at most its length.
+const hubN = (P, st) => Math.min(P.nMajor, st.runs.alerts.stations.length);
+// In the Speakers mode the station line is the hub design (Design tab, "What's at a station"): the major hubs, each
+// at its access type's 15-year cost, plus the minor hubs.
+function kitCost(P) {
   return {
-    stationCost: list => (list.slice(0, n).reduce((a, s) => a + P.byType[s.type].total15, 0) + P.postsTotal) / 1e6,
-    stationLabel: `Ranger stations (${n}) + waypoint posts (${P.nPosts})`,
+    stationCost: () => P.total / 1e6,
+    stationLabel: P.hubs ? `Ranger hubs (${fmt(P.nMajor)} major + ${fmt(P.nMinor)} minor)` : `Ranger hubs (${fmt(P.nMajor)} major)`,
   };
 }
 
@@ -107,7 +109,7 @@ export async function mount(el_, step = 'why') {
     <div class="co" data-step="${S.step}">
       <header class="co-head">
         <div><div class="pv-eyebrow"><span class="co-e-research">Research · where things happen and what exists</span><span class="co-e-design">Design · RFP S-3</span></div>
-          <h2 class="co-title"><span class="co-t-why">Why the basin needs S-3</span><span class="co-t-today">Today, without S-3</span><span class="co-t-alerts">Where the alerts are heard</span><span class="co-t-stations">Who looks after the speakers</span><span class="co-t-kit">What's at a ranger station</span><span class="co-t-what">The S-3 network</span></h2></div>
+          <h2 class="co-title"><span class="co-t-why">Why the basin needs S-3</span><span class="co-t-today">Today, without S-3</span><span class="co-t-alerts">Where the alerts are heard</span><span class="co-t-stations">Who looks after the speakers</span><span class="co-t-kit">Major and minor ranger hubs</span><span class="co-t-what">The S-3 network</span></h2></div>
         <div class="co-stepbar">${stepBar(S.step)}</div>
       </header>
       <div class="co-body">
@@ -386,7 +388,7 @@ function buildStations() {
     el('p', { class: 'co-note' }, tag('Assumption', 'assume'), ' Crew numbers and visit hours are TBR. The map shows X = ', el('b', { text: String(st.X) }), ` and ${st.T_maint_h} h.`),
     el('p', { class: 'co-hint' }, 'Press ', el('kbd', { text: '→' }), ' to design what is at a station: most of these sites do not need a full one.'),
   );
-  const run = G.st.runs.alerts.stations, last = run[run.length - 1];
+  const run = (G.st.runs.alerts_day || G.st.runs.alerts).stations, last = run[run.length - 1];
   hudStations.replaceChildren(
     cell(fmt(st.list.length), `stations (${fmt(st.sites)} sites)`), cell(fmt(st.X), `speakers each, at most · ${st.T_maint_h} h trips`),
     cell(fmt(st.compare.srr_sweet_spot), 'SRR stations, for comparison'), cell(k(st.unassigned), 'speakers beyond 8 h', st.unassigned > 0),
@@ -396,17 +398,17 @@ function buildStations() {
     el('p', { class: 'co-note' }, `These ${fmt(st.list.length)} stations cost $${fmt(last.cum_cost_musd)}M over 15 years on their own, more than the whole $400M cap, and reach ${fmt(last.cum_pct, 1)}% of people by radio or a 1-hour response. Fewer speakers (settlement outlines in Stage 3), more speakers per crew, or communities keeping the smaller speakers bring it down: the curve shows how fast.`));
   draw();
 }
-// ---------- what's at a station: the station design, its crews and its cost ----------
+// ---------- what's at a station: major and minor hubs, their crews and their cost ----------
 function buildKit() {
   const side = $('.co-side .is-kit'), K = S.kit;
   const change = () => {
     S.kitPlan = evaluateKit(K, G.cov);
-    if (S.mode === 'alerts') S.n = S.kitPlan.nMain;
+    if (S.mode === 'alerts') S.n = hubN(S.kitPlan, G.st);
     renderKit(); map.drawStations(S); update();
   };
-  const pick = (part, label) => {
-    const sel = el('select', { 'aria-label': label, onchange: e => { K[part] = e.target.value; change(); } },
-      KIT.main[part].options.map(o => el('option', { value: o.id, text: `${o.name} · $${fmt(o.usd / 1000, o.usd < 10000 ? 1 : 0)}k`, selected: o.id === K[part] || null })));
+  const pick = (sec, part, key, label) => {
+    const sel = el('select', { 'aria-label': label, onchange: e => { K[key] = e.target.value; change(); } },
+      KIT[sec][part].options.map(o => el('option', { value: o.id, text: `${o.name} · $${fmt(o.usd / 1000, o.usd < 10000 ? 1 : 0)}k`, selected: o.id === K[key] || null })));
     return el('label', { class: 'co-kit-row' }, el('span', { text: label }), sel);
   };
   const slider = (label, key, min, max, step, unit, digits = 0) => {
@@ -414,59 +416,107 @@ function buildKit() {
     return el('div', { class: 'co-calc' }, el('span', { text: label }), o,
       el('input', { type: 'range', min, max, step, value: K[key], 'aria-label': label, oninput: e => { K[key] = +e.target.value; o.textContent = `${fmt(K[key], digits)} ${unit}`; }, onchange: change }));
   };
-  const posts = el('input', { type: 'checkbox' }); posts.checked = K.posts;
-  posts.addEventListener('change', () => { K.posts = posts.checked; change(); });
+  const check = (key, label, note) => {
+    const cb = el('input', { type: 'checkbox' }); cb.checked = !!K[key];
+    cb.addEventListener('change', () => { K[key] = cb.checked; buildKit(); change(); });
+    return el('label', { class: 'co-opt' }, cb, el('span', { text: label }), note ? el('small', { text: note }) : null);
+  };
+  const tDay = el('div', { class: 'co-kit-row' }, el('span', { text: 'Longest trip to a minor hub: a day, a long day, two days' }),
+    seg([[8, '8 h'], [12, '12 h'], [24, '24 h']], K.tDay, v => { K.tDay = v; buildKit(); change(); }, 'Longest trip to a minor hub'));
   side.replaceChildren(
     el('div', { class: 'co-kit' },
-      el('h3', { class: 'co-h', text: 'Main station' }),
-      pick('building', 'Building'), pick('tower', 'Tower'), pick('speaker', 'Station loudspeaker'), pick('radio', 'Ranger radios'), pick('backhaul', 'Backhaul (upload / download)'),
-      el('p', { class: 'co-note', text: `Always: S-3 responder terminal ($${fmt(KIT.main.terminal.usd)}), medical and spares kit ($${fmt(KIT.main.kit.usd)}), solar sized to the loads.` }),
+      el('h3', { class: 'co-h', text: 'How crews work' }),
+      check('hubs', 'Minor hubs: rangers stay a few nights and work the speakers around them', null),
+      K.hubs ? [tDay, slider('Working days per stay', 'workDays', 1, 7, 1, 'days')] : el('p', { class: 'co-note', text: 'Major hubs only: every speaker is worked on day trips of up to 8 h; speakers beyond that are left out.' }),
+      el('h3', { class: 'co-h', text: 'Major hub (crews live here)' }),
+      pick('main', 'building', 'building', 'Building'), pick('main', 'tower', 'tower', 'Tower'), pick('main', 'speaker', 'speaker', 'Hub loudspeaker'), pick('main', 'radio', 'radio', 'Ranger radios'), pick('main', 'backhaul', 'backhaul', 'Internet (upload / download)'),
+      el('p', { class: 'co-note', text: `Always: S-3 responder terminal, medical and spares kit, solar sized to the loads, a boat or motorbikes per crew, and what the access adds.` }),
+      K.hubs ? [el('h3', { class: 'co-h', text: 'Minor hub (rangers stay a few nights)' }),
+        pick('minor', 'building', 'minorBuilding', 'Shelter'), pick('minor', 'mast', 'minorMast', 'Relay mast'), pick('minor', 'backhaul', 'minorBackhaul', 'Internet'),
+        check('caretaker', 'Village caretaker at each minor hub', `$${KIT.minor.caretaker.usd_yr}/yr`),
+        el('p', { class: 'co-note', text: `Always: S-3 terminal, 400 W solar with a 3 kWh battery, first aid and a spares cache. Under ${G.cov.hubs.min_minor} speakers nothing is built: rangers lodge in the village.` })] : null,
       el('h3', { class: 'co-h', text: 'Crews' }),
-      slider('Crews per station', 'crews', 1, 4, 1, ''), slider('People per crew', 'people', 2, 6, 1, ''), slider('Hours per crew a year', 'hoursYr', 1000, 2200, 100, 'h'),
+      slider('Most crews at a major hub', 'crews', 1, 4, 1, ''), slider('People per crew', 'people', 2, 6, 1, ''), slider('Rangers per team in the field', 'team', 1, 3, 1, ''),
+      slider('Field days per ranger a year', 'days', 150, 240, 10, 'days'), slider('Working hours in a field day', 'dayH', 6, 11, 1, 'h'),
       el('h3', { class: 'co-h', text: 'Visits' }),
       slider('Routine visits per speaker a year', 'routine', 0, 4, 0.5, '', 1), slider('Repair visits per speaker a year', 'repair', 0, 1, 0.05, '', 2),
       slider('Hours on site', 'onsite', 0.5, 4, 0.5, 'h', 1), slider('Speakers per round', 'perRound', 1, 20, 1, ''),
-      el('label', { class: 'co-opt' }, posts, el('span', { text: 'Waypoint posts: crews run 24 h circuits, overnighting at posts' })),
       el('h3', { class: 'co-h', text: 'Running' }),
       slider('Share of trip time under motor', 'motorShare', 0, 1, 0.05, '', 2), slider('Fuel price', 'fuelUsdL', 1, 2.5, 0.1, '$/L', 1),
+      check('countPeople', 'Count field allowances and caretaker stipends in the total', null),
       el('button', { class: 'v2-link', onclick: () => { Object.assign(K, DEFAULT_KIT()); buildKit(); change(); }, text: 'Back to the default design' }),
-      el('p', { class: 'co-note' }, tag('Assumption', 'assume'), ' Station parts from the SRR cost model; leaner options, crew numbers, visits and fuel are estimates to replace with quotes and ranger input. Salaries are shown, not counted (team rule).')));
+      el('p', { class: 'co-note' }, tag('Assumption', 'assume'), ' Major-hub parts from the SRR cost model; minor hubs, access extras, crews, visits and fuel are estimates to replace with quotes and ranger input. Salaries are shown, not counted (team rule).')));
   renderKit();
 }
 function renderKit() {
-  const P = S.kitPlan, before = G.cov.stations, beforeCost = G.st.runs.alerts.stations.at(-1).cum_cost_musd;
-  const M = v => `$${fmt(v / 1e6, v < 1e7 ? 1 : 0)}M`;
+  const P = S.kitPlan, before = G.cov.stations, beforeCost = (G.st.runs.alerts_day || G.st.runs.alerts).stations.at(-1).cum_cost_musd;
+  const M = v => `$${fmt(v / 1e6, v < 1e7 ? 1 : 0)}M`, k = v => `$${fmt(v / 1000)}k`;
   hudKit.replaceChildren(
-    cell(fmt(P.nMain), 'main stations'), cell(fmt(P.nPosts), 'waypoint posts'), cell(fmt(P.X), 'speakers per station (X)'),
-    cell(`$${fmt(P.avg15 / 1000)}k`, 'per main station, 15 yr'), cell(M(P.total), `stations + posts · was $${fmt(beforeCost)}M`, P.total / 1e6 > 400));
+    cell(fmt(P.nMajor), 'major hubs'), cell(P.hubs ? fmt(P.nMinor) : '—', P.hubs ? `minor hubs · ${fmt(P.nVillage)} village stays` : 'no minor hubs'), cell(fmt(P.rangers), 'rangers'),
+    cell(P.hubs ? fmt(P.nightsPerRanger) : '0', 'nights away per ranger a year'), cell(M(P.total), `hubs, 15 yr · every site a station: $${fmt(beforeCost)}M`, P.total / 1e6 > 400));
   const spec = el('div', { class: 'co-spec' }, [
-    [`${fmt(P.spec.downMbps)} / ${fmt(P.spec.upMbps, P.spec.upMbps < 1 ? 3 : 0)}`, 'Mbps down / up'], [`${fmt(P.spec.relayKm, 1)} km`, `sensor relay reach (${P.spec.towerM} m tower)`],
-    [P.spec.speakerM ? `${fmt(P.spec.speakerM)} m` : 'none', 'station loudspeaker heard at night'], [`${fmt(P.power.pvKwp, 1)} kWp`, `solar · ${fmt(P.power.battKwh)} kWh battery`],
-    [fmt(P.spec.crewPeople), `crew on site (${S.kit.crews} × ${S.kit.people})`], [`${fmt(P.tripsYr)}`, `rounds a year, ${fmt(P.trip, 1)} h each way`],
+    [`${fmt(P.spec.downMbps)} / ${fmt(P.spec.upMbps, P.spec.upMbps < 1 ? 3 : 0)}`, 'Mbps down / up at a major hub'], [`${fmt(P.spec.relayKm, 1)} km`, `radio relay reach (${P.spec.towerM} m tower)`],
+    [fmt(P.avgCrews, 2), `crews per major hub on average (up to ${S.kit.crews})`], [`${fmt(P.power.pvKwp, 1)} kWp`, `solar · ${fmt(P.power.battKwh)} kWh battery`],
+    ...(P.hubs ? [[fmt(P.staysYr), `stays a year, ${fmt(P.daysPerStay, 1)} days each`], [P.spec.minorMastM ? `${fmt(P.spec.minorRelayKm, 1)} km` : 'none', `minor-hub relay (${P.spec.minorMastM || 0} m)`]]
+      : [[fmt(P.unserved), 'speakers beyond 8 h, left out'], [fmt(P.dayRoundsYr), 'day rounds a year']]),
   ].map(([b, t]) => el('div', {}, el('b', { text: b }), el('span', { text: t }))));
-  const parts = chartBlock('co-kit-parts', 'One main station: parts', el('table', { class: 'vtable' },
-    el('tbody', {}, P.parts.map(([k, name, usd]) => el('tr', {}, el('th', { scope: 'row', text: k }), el('td', { text: name }), el('td', { text: `$${fmt(usd)}` }))),
-      el('tr', {}, el('th', { scope: 'row', text: 'Total' }), el('td', { text: 'before vehicles and the site logistics multiplier' }), el('td', { text: `$${fmt(P.fixedCapex)}` })))),
-  [['Part', 'Choice', 'USD'], ...P.parts.map(([k, n, u]) => [k, n, fmt(u)])]);
-  const types = Object.entries(P.byType).filter(([t]) => P.types[t]);
-  const life = chartBlock('co-kit-life', '15 years per main station, by access', el('table', { class: 'vtable' },
-    el('thead', {}, el('tr', {}, ['Access', 'Stations', 'Build', 'Running / yr', 'of it fuel', 'Replacements', '15 yr'].map(h => el('th', { text: h })))),
-    el('tbody', {}, types.map(([t, v]) => el('tr', {}, el('th', { scope: 'row', text: t }), el('td', { text: fmt(P.types[t]) }), el('td', { text: `$${fmt(v.capex / 1000)}k` }),
-      el('td', { text: `$${fmt(v.opexYr / 1000, 1)}k` }), el('td', { text: `$${fmt(v.fuelYr / 1000, 1)}k` }), el('td', { text: `$${fmt(v.repl / 1000)}k` }), el('td', { text: `$${fmt(v.total15 / 1000)}k` }))))),
-  [['Access', 'Stations', 'Build', 'Running/yr', 'Fuel/yr', 'Replacements', '15 yr'], ...types.map(([t, v]) => [t, String(P.types[t]), fmt(v.capex), fmt(v.opexYr), fmt(v.fuelYr), fmt(v.repl), fmt(v.total15)])]);
-  const max = Math.max(beforeCost * 1e6, P.total + P.salaries15);
+
+  // the ranger setups, with the speakers fixed
+  const setups = evaluateSetups(S.kit, G.cov), cur = s => s.id === (S.kit.hubs ? (S.kit.caretaker ? 'care' : `h${S.kit.tDay}`) : 'day');
+  const cmp = chartBlock('co-kit-setups', 'Ranger setups compared (speakers fixed)', el('div', { class: 'co-setups' }, setups.map(s => el('div', { class: `co-setup${cur(s) ? ' is-on' : ''}` },
+    el('div', { class: 'co-setup-h' }, el('b', { text: s.name }), el('span', { text: M(s.P.total) }),
+      cur(s) ? el('small', { text: 'current' }) : el('button', { class: 'v2-link', onclick: () => { Object.assign(S.kit, s.kit); buildKit(); S.kitPlan = evaluateKit(S.kit, G.cov); if (S.mode === 'alerts') S.n = hubN(S.kitPlan, G.st); renderKit(); map.drawStations(S); update(); }, text: 'Use this' })),
+    el('div', { class: 'co-setup-n' }, `${fmt(s.P.nMajor)} major · ${s.P.hubs ? `${fmt(s.P.nMinor)} minor + ${fmt(s.P.nVillage)} village stays` : 'no minor hubs'} · ${fmt(s.P.rangers)} rangers · ${fmt(s.P.nightsPerRanger)} nights away a year${s.P.unserved ? ` · ${fmt(s.P.unserved)} speakers left out` : ''}`),
+    el('div', { class: 'co-pc' }, el('ul', {}, s.pros.map(t => el('li', { class: 'is-pro', text: t }))), el('ul', {}, s.cons.map(t => el('li', { class: 'is-con', text: t }))))))),
+  [['Setup', '15 yr ($M)', 'Major', 'Minor', 'Village stays', 'Rangers', 'Nights away / ranger / yr', 'Speakers left out'],
+    ...setups.map(s => [s.name, fmt(s.P.total / 1e6, 0), fmt(s.P.nMajor), fmt(s.P.nMinor), fmt(s.P.nVillage), fmt(s.P.rangers), fmt(s.P.nightsPerRanger), fmt(s.P.unserved)])]);
+
+  // what is at each tier, row by role
+  const mj = Object.fromEntries(P.parts.map(([n, c, u]) => [n, `${c} · $${fmt(u)}`])), mn = Object.fromEntries(P.minorParts.map(([n, c, u]) => [n, `${c} · $${fmt(u)}`]));
+  const tierRows = [
+    ['People', `${fmt(P.avgCrews, 1)} crews of ${S.kit.people} live here`, `nobody lives here; ${S.kit.team} rangers stay ${S.kit.workDays} working days`],
+    ['Building', mj.Building, mn.Shelter], ['Mast', mj.Tower, mn.Relay], ['Loudspeaker', mj.Loudspeaker, "none: the village's own speaker"],
+    ['Radios', mj.Radios, "the relay radio on its mast and the rangers' handhelds"], ['Internet', mj.Backhaul, mn.Internet],
+    ['S-3 terminal', mj['S-3 terminal'], mn.Terminal], ['Power', mj.Power, mn.Power], ['Kit', mj.Kit, mn.Kit],
+    ['Vehicles', 'a boat (river) or two motorbikes per crew', 'none: crews arrive on them'],
+    ['Parts before access and logistics', `$${fmt(P.fixedCapex)}`, `$${fmt(P.minorCapex0)}`],
+  ];
+  const tiers = chartBlock('co-kit-tiers', "What's at each hub", el('table', { class: 'vtable co-tiers' },
+    el('thead', {}, el('tr', {}, el('th', { text: '' }), el('th', { text: 'Major hub' }), el('th', { text: 'Minor hub' }))),
+    el('tbody', {}, tierRows.map(r => el('tr', {}, el('th', { scope: 'row', text: r[0] }), el('td', { text: r[1] }), el('td', { text: r[2] }))))),
+  [['', 'Major hub', 'Minor hub'], ...tierRows]);
+
+  // what changes with access
+  const TY = ['road', 'river', 'remote'];
+  const access = chartBlock('co-kit-access', 'Road, river or remote: what changes', el('table', { class: 'vtable co-tiers' },
+    el('thead', {}, el('tr', {}, el('th', { text: '' }), TY.map(t => el('th', { text: `${t[0].toUpperCase()}${t.slice(1)} · ×${KIT.access.logistics[t]}` })))),
+    el('tbody', {},
+      el('tr', {}, el('th', { scope: 'row', text: 'Getting there' }), TY.map(t => el('td', { text: KIT.access.how[t] }))),
+      el('tr', {}, el('th', { scope: 'row', text: 'Major hub adds' }), TY.map(t => el('td', { text: KIT.access.major[t].map(i => `${i.name} ($${fmt(i.usd / 1000)}k)`).join('; ') || '—' }))),
+      el('tr', {}, el('th', { scope: 'row', text: 'Minor hub adds' }), TY.map(t => el('td', { text: KIT.access.minor[t].map(i => `${i.name} ($${fmt(i.usd / 1000)}k)`).join('; ') || '—' }))),
+      el('tr', {}, el('th', { scope: 'row', text: 'Major hubs' }), TY.map(t => el('td', { text: `${fmt(P.types[t])} · ${k(P.byType[t].capex)} to build, ${k(P.byType[t].total15)} over 15 yr (fuel $${fmt(P.byType[t].fuelYr / 1000, 1)}k/yr)` }))),
+      P.hubs ? el('tr', {}, el('th', { scope: 'row', text: 'Minor hubs' }), TY.map(t => el('td', { text: `${fmt(P.mtypes[t])} · ${k(P.minorByType[t].capex)} to build, ${k(P.minorByType[t].total15)} over 15 yr` }))) : null)),
+  [['Access', 'Major hubs', 'Major build', 'Major 15 yr', 'Minor hubs', 'Minor build', 'Minor 15 yr'],
+    ...TY.map(t => [t, fmt(P.types[t]), fmt(P.byType[t].capex), fmt(P.byType[t].total15), fmt(P.mtypes[t]), fmt(P.minorByType[t].capex), fmt(P.minorByType[t].total15)])]);
+
+  const max = Math.max(beforeCost * 1e6, P.total + P.salaries15, P.majorTotal + P.minorTotal + P.people15);
   const bar = (label, v, col) => el('div', {}, el('span', { text: label }), el('i', { style: `width:${(v / max) * 100}%;background:var(${col})` }), el('b', { text: M(v) }));
-  const compare = chartBlock('co-kit-cmp', 'Against every site as a full station', el('div', { class: 'co-costbar' },
+  const compare = chartBlock('co-kit-cmp', '15 years: hubs against every site as a full station', el('div', { class: 'co-costbar' },
     bar(`${fmt(before.list.length)} full stations`, beforeCost * 1e6, '--critical'),
-    bar(`${fmt(P.nMain)} main stations`, P.mainTotal, '--s4'), bar(`${fmt(P.nPosts)} waypoint posts`, P.postsTotal, '--s5'),
-    bar('Crew salaries (not counted)', P.salaries15, '--neu-3')),
-  [['Line', '$M'], [`${before.list.length} full stations (SRR kit)`, fmt(beforeCost, 1)], ['Main stations', fmt(P.mainTotal / 1e6, 1)], ['Waypoint posts', fmt(P.postsTotal / 1e6, 1)], ['Salaries, not counted', fmt(P.salaries15 / 1e6, 1)]]);
+    bar(`${fmt(P.nMajor)} major hubs`, P.majorTotal, '--s4'), P.hubs ? bar(`${fmt(P.nMinor)} minor hubs`, P.minorTotal, '--s5') : null,
+    P.hubs ? bar(`Allowances${S.kit.caretaker ? ', stipends' : ''}${S.kit.countPeople ? '' : ' (not counted)'}`, P.people15, '--neu-3') : null,
+    bar('Salaries (not counted)', P.salaries15, '--neu-3')),
+  [['Line', '$M'], [`${before.list.length} full stations (SRR kit)`, fmt(beforeCost, 1)], ['Major hubs', fmt(P.majorTotal / 1e6, 1)], ['Minor hubs', fmt(P.minorTotal / 1e6, 1)],
+    ['Allowances and stipends', fmt(P.people15 / 1e6, 1)], ['Salaries, not counted', fmt(P.salaries15 / 1e6, 1)]]);
+
   $('.co-res .is-kit').replaceChildren(
-    el('div', { class: 'co-headline' }, el('b', { text: `${M(P.total)} for ${fmt(P.nMain)} stations + ${fmt(P.nPosts)} posts` }),
-      el('span', { text: `over 15 years, against $${fmt(beforeCost)}M with every site a full station. Each station's crews look after up to ${fmt(P.X)} speakers: ${fmt(P.visits, 2)} visits a speaker a year, ${fmt(P.perRound)} speakers a round, ${fmt(P.trip, 1)} h trips.` })),
-    spec, compare, parts, life,
-    el('p', { class: 'co-note' }, `The biggest levers: visits per speaker (health telemetry means crews go only on a fault), speakers per round, and posts that let crews run longer circuits. Next, S-3 network: these ${fmt(P.nMain)} main stations are its "Speakers" stations, and this cost is its station line.`),
-    el('p', { class: 'co-hint' }, 'Press ', el('kbd', { text: '→' }), ' to wire these stations to the satellites and hubs.'));
+    el('div', { class: 'co-headline' }, el('b', { text: P.hubs ? `${M(P.total)} for ${fmt(P.nMajor)} major + ${fmt(P.nMinor)} minor hubs` : `${M(P.total)} for ${fmt(P.nMajor)} major hubs` }),
+      el('span', { text: P.hubs
+        ? `over 15 years, every speaker reached. Crews live at the major hubs and travel up to ${S.kit.tDay} h to a minor hub, stay ${S.kit.workDays} working days and work the speakers within ${G.cov.hubs.t_local_h} h of it. Up to ${fmt(P.X)} speakers per major hub; most are set by reach and need one crew.`
+        : `over 15 years on day trips only; ${fmt(P.unserved)} speakers deep in the forest are left out.` })),
+    spec, cmp, tiers, access, compare,
+    el('p', { class: 'co-note' }, `Minor hubs are empty most of the time, so only the ${fmt(P.nMajor)} major hubs count for the 1-hour response in the S-3 network. The map shows the default design (a long day out); the numbers follow your settings.`),
+    el('p', { class: 'co-hint' }, 'Press ', el('kbd', { text: '→' }), ' to wire the major hubs to the satellites and hubs.'));
 }
 
 function stationCurve(Xnow, tSel) {
@@ -555,7 +605,8 @@ function renderLegend() {
   if (S.step === 'kit') {
     const item = (sw, text) => el('span', { class: 'co-lg is-fixed' }, el('i', { class: 'co-sw', style: sw }), text);
     $('.co-legend').replaceChildren(el('div', { class: 'co-lgroup' }, el('b', { text: 'Station design' }),
-      item('background:var(--text)', 'Main station (shape = access)'), item('border:1.5px solid var(--s5)', 'Waypoint post'), item('background:var(--gold);opacity:.3', 'Speakers (faint)')));
+      item('background:var(--text)', 'Major hub (shape = access)'), item('border:1.5px solid var(--s5)', 'Minor hub'), item('background:var(--s5);border-radius:50%;opacity:.55', 'Village stay'),
+      item('background:var(--s5);height:2px', 'Minor hub → its major'), item('background:var(--gold);opacity:.3', 'Speakers (faint)')));
     return;
   }
   if (S.step === 'alerts' || S.step === 'stations') {
@@ -796,7 +847,7 @@ function curveChart() {
   sv('circle', { cx: x(spot.knee), cy: y(st[spot.knee - 1].cum_pct), r: 3.5, fill: 'var(--accent)' }, s);
   svText(s, { x: x(spot.knee) + 6, y: y(st[spot.knee - 1].cum_pct) + 14, class: 'sub' }, `sweet spot ${spot.knee}`);
   if (S.n > 0) {
-    const p = st[S.n - 1];
+    const p = st[Math.min(S.n, NM) - 1];
     sv('line', { x1: x(S.n), x2: x(S.n), y1: m.t, y2: H - m.b, class: 'cursor' }, s);
     svText(s, { x: Math.min(x(S.n) + 5, W - 116), y: m.t + 10, class: 'lbl' }, `${fmt(p.cum_pct, 1)}% · $${fmt(p.cum_cost_musd, 1)}M`);
   }

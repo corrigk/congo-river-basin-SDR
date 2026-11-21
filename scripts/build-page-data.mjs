@@ -69,6 +69,7 @@ if (fs.existsSync(new URL('hazards.json', SRC))) write('hazards.json', read('haz
 // Village speakers and the stations that look after them (modeled proxy until GRID3, Stage 3).
 const spk = fs.existsSync(new URL('speakers.json', SRC)) ? read('speakers.json') : null;
 const sts = fs.existsSync(new URL('stations_speaker.json', SRC)) ? read('stations_speaker.json') : null;
+const hubs = fs.existsSync(new URL('hubs.json', SRC)) ? read('hubs.json') : null; // major and minor hubs (hubs_from_speakers.py)
 if (spk && sts) {
   write('coverage.json', {
     _note: spk._note, year: spk.year, radius_m: spk.radius_m, cutoff_people: spk.cutoff_people, people_per_receiver: spk.people_per_receiver,
@@ -79,14 +80,19 @@ if (spk && sts) {
     stations: { _note: sts._note, T_maint_h: sts.T_maint_h, X: sts.X, x_formula: sts.x_formula, speakers: sts.speakers, assigned: sts.assigned,
       unassigned: sts.unassigned, sites: sts.sites, compare: sts.compare, sweep: sts.sweep, owner_b64: sts.owner_b64,
       list: sts.stations.map(s => [r(s.lon, 3), r(s.lat, 3), s.type, s.n_speakers, s.max_travel_h, s.mean_travel_h]) },
+    hubs: hubs && { speakers: hubs.speakers, t_local_h: hubs.t_local_h, t_day_h: hubs.t_day_h, t_days: hubs.t_days, min_minor: hubs.min_minor,
+      min_remote: hubs.min_remote, service_hubs: hubs.service_hubs, sweep: hubs.sweep, default: hubs.default,
+      majors: hubs.majors, minors: hubs.minors, village_stays: hubs.village_stays },
   });
 }
 
 const st = read('stations.json');
 for (const y of pop.years) {
   const runs = {};
-  for (const mode of ['radio', 'response', 'speaker', 'mix', 'alerts']) {
-    const run = mode === 'alerts' ? sts?.runs[String(y)] : st.runs[`${mode}_${y}`];
+  // 'alerts': the major hubs (minor hubs are empty most of the time, so they do not count for response);
+  // 'alerts_day': every speaker-derived site a full station on day trips (the Ranger stations step)
+  for (const mode of ['radio', 'response', 'speaker', 'mix', 'alerts', 'alerts_day']) {
+    const run = mode === 'alerts' ? (hubs ?? sts)?.runs[String(y)] : mode === 'alerts_day' ? sts?.runs[String(y)] : st.runs[`${mode}_${y}`];
     if (!run) continue;
     runs[mode] = {
       ...run,

@@ -14,7 +14,7 @@ before it faintly on the map and animates the new layer in, so the links are vis
 | Today | `#research/today` | | Who existing networks reach (modeled proxy) |
 | Speakers & receivers | `#design` | People (where they cluster) and the Why map's hazards (rollout order) | Village speakers, receivers, urban centres; speakers fade in hazard-first |
 | Ranger stations | `#design/stations` | The speakers: each station looks after up to X within an 8-hour trip | Stations, each speaker area wired to its station, the SRR's 78 for comparison; crew-hours calculator |
-| What's at a station | `#design/kit` | The stations and the speakers they look after | Main stations and waypoint posts on the map; the station's parts, comms, power, crews, visits and 15-year cost |
+| What's at a station | `#design/kit` | The stations and the speakers they look after | Major and minor ranger hubs on the map; what is at each, road / river / remote differences, crews, stays, setups compared, 15-year cost |
 | S-3 network | `#design/network` | The speaker-driven stations ("Speakers" mode of the station slider) | Satellites, GEO footprint, hubs, data flow (stations ↔ nodes ↔ hub, alerts down), checks and cost |
 | Who must hear it · How far a voice carries | `#design/hear`, `#design/sound` | | Explainers, opened from the speakers step |
 
@@ -233,41 +233,74 @@ cost is about $575M (stations $212M of it); the slider (or the Mix mode) shows t
 Fewer speakers per village (settlement outlines), more speakers per crew, or communities keeping the smaller speakers
 are the levers; Stage 3 and 4 will move all of these numbers.
 
-## What's at a station: the station design (`#design/kit`)
+## What's at a station: major and minor ranger hubs (`#design/kit`)
 
-`src/s3/coverage/stationkit.js`, catalog `analysis/data/station_kit.json` (every figure labelled srr, published or
-estimate). The SRR costed every site as a full station ($444–646k over 15 years each, so the 1,037 derived sites came
-to $512M). Most of those sites only exist to service nearby speakers, so the design has two kinds of site:
+Team design, 2026-11-20: crews live at **major hubs**; **minor hubs** are outstations where one or two rangers stay a
+few nights and work the speakers around them. The speakers are fixed (147,077, GRID3); what varies is how the rangers
+are set up. `analysis/scripts/hubs_from_speakers.py` places the hubs, `src/s3/coverage/stationkit.js` sizes the crews
+and costs them, catalog `analysis/data/station_kit.json` (every figure labelled srr, published or estimate).
 
-- **Main station**: building (prefab / containers / shared), tower (30 / 24 / 12 m), station loudspeaker (3.2 kW /
-  600 W / none), radios (VHF repeater + handhelds / handhelds), backhaul (Starlink about 100 down / 15 up Mbps, VHF-sat
-  10 / 2, or the S-3 terminal only), the S-3 responder terminal, the medical and spares kit, and solar plus LiFePO4
-  sized to the loads (same method as the Trades physics). Crews (default 2 × 3 people) with a boat at river sites or
-  motorbikes elsewhere.
-- **Waypoint post**: 15 m mast, small solar, relay radio, locked shelter for spares and an overnight stop (about $16.5k,
-  estimate). With posts, crews run circuits of up to 24 h instead of 8-hour day trips, and a circuit three times
-  longer strings three times the stops (assumption, adjustable through "speakers per round").
+**What is at each hub (default):**
 
-**Capacity:** X = crews × crew hours a year ÷ (visits per speaker a year × (hours on site + 2 × one-way trip ÷
-speakers per round)). The one-way trip comes from the speaker-to-station derivation at that X (a few fixed-point
-steps); visits = routine (default 1 a year) + repairs (0.3 a year: with health telemetry crews go on a fault).
+| | Major hub (crews live here) | Minor hub (rangers stay a few nights) |
+| --- | --- | --- |
+| People | the crews its speakers need (up to 2 crews of 3) | nobody lives here; 2 rangers stay 3 working days |
+| Building | prefab with ops room and bunks for 6 ($55k; containers or shared as options) | built shelter, 2 bunks, locked store ($6k; container or a rented room as options) |
+| Mast | 30 m lattice ($45k; 24 / 12 m options) | 9 m pole with the relay radio ($4k; 15 m or none) |
+| Loudspeaker | 3.2 kW array ($30k; 600 W or none) | none: the village's own speaker |
+| Radios | VHF repeater + 10 handhelds | the relay radio and the rangers' handhelds |
+| Internet | Starlink (about 100 / 15 Mbps) | none (S-3 terminal only), Starlink Mini as an option |
+| S-3 terminal, power, kit | terminal, solar sized to the loads, medical and spares kit | terminal, 400 W solar + 3 kWh, first aid and spares |
+| Vehicles | a boat (river) or two motorbikes per crew | none: crews arrive on them |
 
-**How many:** main stations = the derivation's station count at this X for 24 h circuits (posts on) or 8 h day trips;
-posts = the day-trip count minus the circuit count (the stations that circuits replace), placed at the remaining
-derived sites. Main stations take the first sites of the derivation order (an approximation for X other than 266).
+A minor hub that would serve fewer than 10 speakers is not built: the rangers lodge in the village (a **village
+stay**). An optional village **caretaker** at each minor hub ($30 a month) checks speakers after each monthly test and
+is assumed to halve the crews' routine visits.
 
-**Cost, 15 years:** parts and vehicles × the site's logistics multiplier (road 1.15, river 1.3, remote 1.6), plus 6%
-of capex a year maintenance, backhaul subscription and rent, battery swaps (8 years), vehicle replacement (boat 6
-years, motorbikes 5), and fuel for the motorised share of every round (default half the trip time; boat 0.6 L/km, two
-motorbikes 0.035 L/km, $1.70/L: estimates). Crew salaries (default $3k a person a year, estimate) are shown, not
-counted (team rule).
+**Road, river or remote.** Logistics multipliers 1.15 / 1.3 / 1.6 (SRR). A river major hub adds a mooring, boat shed
+and fuel store ($9k) and a floor raised above the flood level ($12k); a remote one six months of spares and two more
+days of battery ($10k); a road one a fuel store and motorbike shed ($3k). River minor hubs add a mooring and raised
+floor ($4k), remote ones a bigger spares cache and battery ($3k). Remote motor legs are taken as half (on foot).
 
-**Default design (GRID3 speakers):** X = 679 speakers per station, **360 main stations + 516 waypoint posts, about
-$212M** (main stations about $553k each over 15 years on average; river sites cost most because of boat fuel). With
-two-container buildings, a 12 m mast and a 600 W station speaker: $132M. With posts off: 866 stations, $450M. The SRR's
-way of working (2 routine visits a speaker, one speaker per trip, no posts) needs about 1,540 stations and $686M.
+**Where the hubs go** (travel model of the SRR: boat 25 km/h, road 30, foot 3, on 14 km cells):
 
-In the S-3 network step, the "Speakers" station mode uses this design: its station line becomes "Ranger stations (N)
-+ waypoint posts (M)" at this cost, and the station count follows the design's main stations.
+1. Service hubs: every speaker cell within a 3 h day trip of a hub (greedy maximum coverage): 7,270 for 10,397 cells.
+   On foot 3 h does not reach the next 14 km cell, so most forest cells are their own hub; the median is 6 speakers,
+   hence the village stays.
+2. Major hubs: capacitated greedy over the candidate sites (near a river, road or town), each taking the hubs within
+   the longest trip allowed (8, 12 or 24 h), up to X speakers. A hub within 3 h of its major is worked on day trips;
+   further out it is a minor hub. Hubs beyond every candidate get **remote major hubs** where a cluster of at least 50
+   speakers justifies one; smaller leftovers are long stays from the nearest major within two days. Every speaker is
+   reached (day trips alone leave 23,413 beyond 8 h).
+
+**Crews.** Team-days a year = crews × people × field days (200) ÷ rangers per team (2). Per speaker a year: day trips
+visits × (hours on site + 2 × trip ÷ speakers per round) ÷ field-day hours (9); stays the same with the local trip,
+× (1 + 2 × trip to the minor hub ÷ (working days per stay × field-day hours)). X = team-days ÷ the mix. Most major
+hubs are set by reach, not capacity: each gets only the crews its speakers need (1.1 crews on average by default).
+
+**Cost, 15 years:** parts, access extras and vehicles × the logistics multiplier; 6% of capex a year maintenance;
+subscriptions and rent; battery swaps; vehicle replacement; fuel for the motorised legs (day rounds, travel to the
+minor hubs, local rounds). People costs are shown, not counted: salaries ($3k a ranger a year), field allowances ($10 a
+ranger a night away) and caretaker stipends; a switch counts the allowances and stipends.
+
+**Ranger setups compared (default kit):**
+
+| Setup | Major | Minor + village stays | Rangers | Nights away / ranger / yr | 15 yr |
+| --- | --- | --- | --- | --- | --- |
+| Major hubs only, day trips | 833 | none | 2,499 | 0 | $426M, 23,413 speakers left out |
+| Minor hubs, one day out (8 h, 2 working days) | 979 | 2,016 + 4,542 | 3,135 | 33 | $638M |
+| **Minor hubs, a long day out (12 h, 3 days): default** | **730** | **2,225 + 4,690** | **2,448** | **48** | **$521M** |
+| Few major hubs, two days out (24 h, 5 days) | 299 | 2,389 + 4,794 | 1,224 | 114 | $320M |
+| Default + caretakers + rented rooms | 713 | 2,211 + 4,688 | 2,286 | 31 | $493M |
+
+What it says: minor hubs reach every speaker, but they save money only when the major hubs can be fewer, which needs
+longer trips out; the price is rangers' time away (114 nights a year at two days out). The major-hub kit is the other
+lever: with containers, a 24 m guyed mast and a 600 W speaker the long-day design is about $380M, and with a 12 m mast
+and no hub loudspeaker about $336M. The old "main station + waypoint post" design ($212M) assumed 24 h circuits with
+$16.5k posts and no village stays; this one replaces it.
+
+In the S-3 network step, the "Speakers" mode uses the major hubs (minor hubs are empty most of the time, so they do
+not count for the 1-hour response; the default's major hubs reach 43% of people by radio or a 1-hour response) and
+its station line becomes "Ranger hubs (N major + M minor)" at this cost. The map shows the default design.
 
 Later: an animation of a crew's rounds through the forest over a week, a month and a year (team request).

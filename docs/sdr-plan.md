@@ -38,6 +38,13 @@ step keeping the one before it faintly and animating the links in. Speakers come
 (`site_speakers.py`, hazard-first rollout), stations from the speakers (`stations_from_speakers.py`), and the network
 step uses those stations. Stage 3 (GRID3) replaces the proxy with no page change.
 
+## Major and minor ranger hubs, 2026-11-20
+
+Team design: crews live at major hubs; minor hubs are outstations where 1-2 rangers stay a few nights; under 10
+speakers they lodge in the village. `hubs_from_speakers.py` places them (remote majors where no road or river reaches);
+the station page lists what is at each hub, what road / river / remote changes, and compares five ranger setups with
+the speakers fixed. Default (a long day out): 730 major + 2,225 minor hubs, 2,448 rangers, $521M over 15 years.
+
 ## Stage 3 (part 2): real terrain in the pilot, 2026-11-20
 
 Copernicus GLO-30 and ETH canopy height read as windows over Mbandaka; 12 pilot speakers × 12 bearings profiled

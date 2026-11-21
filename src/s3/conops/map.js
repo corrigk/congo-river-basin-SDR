@@ -232,21 +232,32 @@ export function createConopsMap(holder, opts = {}) {
       cs.strokeStyle = css('--muted'); cs.lineWidth = 1.2;
       for (const s of G.cov.srr) { const [x, y] = px(s.lon, s.lat); shape(cs, s.type, x, y, 4.4); cs.stroke(); }
     }
-    const text = css('--text'), edge = css('--bg'), kit = S.step === 'kit' || S.step === 'what' ? S.kitPlan : null;
-    // In the station-design step the first nMain sites are main stations and the next nPosts become waypoint posts.
-    const nMain = kit ? kit.nMain : nShow, nPosts = kit ? kit.nPosts : 0;
-    if (kit) {
-      cs.strokeStyle = css('--s5'); cs.lineWidth = 1.3;
-      for (let i = nMain; i < Math.min(st.list.length, nMain + nPosts); i++) {
-        const [lon, lat] = st.list[i], [x, y] = px(lon, lat);
-        shape(cs, 'remote', x, y, 2.6); cs.stroke();
-        h.push({ x, y, r: 5, tip: () => [el('b', { text: 'Waypoint post' }), el('div', { text: 'Mast, small solar, relay radio, locked shelter: crews stop here on longer rounds' }), el('div', { class: 'k', text: 'Station design step' })] });
+    const text = css('--text'), edge = css('--bg'), hubs = (S.step === 'kit' || S.step === 'what') && G.cov.hubs;
+    if (hubs) {
+      // The hub design (default: a long day out): major hubs, minor hubs linked to their major, village stays.
+      const Hb = G.cov.hubs, s5 = css('--s5');
+      if (S.step === 'kit') {
+        cs.strokeStyle = s5; cs.lineWidth = 0.7; cs.globalAlpha = 0.55; cs.beginPath();
+        for (const m of Hb.minors) { const [a, b] = px(m[0], m[1]), j = Hb.majors[m[4]], [c, d] = px(j[0], j[1]); cs.moveTo(a, b); cs.lineTo(c, d); }
+        cs.stroke(); cs.globalAlpha = 0.5; cs.fillStyle = s5;
+        for (const v of Hb.village_stays) { const [x, y] = px(v[0], v[1]); cs.fillRect(x - 0.9, y - 0.9, 1.8, 1.8); }
+        cs.globalAlpha = 1; cs.lineWidth = 1.3;
+        for (const m of Hb.minors) {
+          const [x, y] = px(m[0], m[1]); shape(cs, m[2], x, y, 2.6); cs.stroke();
+          h.push({ x, y, r: 5, tip: () => [el('b', { text: `Minor hub · ${m[2]} access` }), kv('Speakers worked from it', fmt(m[3])), kv('From its major hub', `${fmt(m[5], 1)} h`), el('div', { class: 'k', text: 'Rangers stay a few nights; nobody lives here' })] });
+        }
       }
+      Hb.majors.forEach((m, i) => {
+        const [x, y] = px(m[0], m[1]), r = 2.4 + Math.min(2.6, m[3] / 400);
+        shape(cs, m[2], x, y, r); cs.fillStyle = text; cs.fill(); cs.strokeStyle = edge; cs.lineWidth = 1; cs.stroke();
+        h.push({ x, y, r: Math.max(5, r + 2), tip: () => [el('b', { text: `Major hub #${i + 1} · ${m[2]} access` }), kv('Speakers it looks after', fmt(m[3])), el('div', { class: 'k', text: 'Crews live here (default design: a long day out)' })] });
+      });
+      return;
     }
-    for (let i = 0; i < Math.min(nShow, nMain); i++) {
+    for (let i = 0; i < nShow; i++) {
       const [lon, lat, type, nsp, maxH, meanH] = st.list[i], [x, y] = px(lon, lat), r = 2.2 + Math.min(2.6, nsp / 120);
       shape(cs, type, x, y, r); cs.fillStyle = text; cs.fill(); cs.strokeStyle = edge; cs.lineWidth = 1; cs.stroke();
-      h.push({ x, y, r: Math.max(5, r + 2), tip: () => [el('b', { text: `Ranger station #${i + 1} · ${type} access` }), kit ? null : kv('Village speakers it looks after', fmt(nsp)), kit ? null : kv('Longest trip', `${fmt(maxH, 1)} h`), kit ? null : kv('Average trip', `${fmt(meanH, 1)} h`), el('div', { class: 'k', text: kit ? 'Main station (station design step)' : 'Derived from the speakers (modeled proxy)' })].filter(Boolean) });
+      h.push({ x, y, r: Math.max(5, r + 2), tip: () => [el('b', { text: `Ranger station #${i + 1} · ${type} access` }), kv('Village speakers it looks after', fmt(nsp)), kv('Longest trip', `${fmt(maxH, 1)} h`), kv('Average trip', `${fmt(meanH, 1)} h`), el('div', { class: 'k', text: 'Derived from the speakers (GRID3)' })] });
     }
   }
   // Animate the new step's layer in. A timer, not animation frames, so it also finishes in a background tab.
@@ -479,7 +490,7 @@ export function createConopsMap(holder, opts = {}) {
       wrap.setAttribute('aria-label', S.step === 'alerts'
         ? `Map of village speakers and receivers (GRID3 settlements in the DRC, a modeled proxy elsewhere): ${fmt(cv.by_year[cv.year].t1)} speakers where people cluster, placed first where hazards are highest, ${fmt(cv.by_year[cv.year].t2)} receivers for smaller villages, urban centres reached by phones first.`
         : S.step === 'kit'
-        ? `Map of the station design: ${fmt(S.kitPlan?.nMain ?? 0)} main ranger stations and ${fmt(S.kitPlan?.nPosts ?? 0)} waypoint posts that crews stop at on their rounds.`
+        ? `Map of the ranger hubs (default design): ${fmt(G.cov.hubs?.majors.length ?? 0)} major hubs where crews live and ${fmt(G.cov.hubs?.minors.length ?? 0)} minor hubs where they stay a few nights.`
         : S.step === 'stations'
         ? `Map of ${fmt(cv.stations.list.length)} ranger stations derived from the speakers, each looking after up to ${cv.stations.X} speakers within ${cv.stations.T_maint_h} hours, with lines from each speaker area to its station; the SRR's ${cv.stations.compare.srr_sweet_spot} stations for comparison.`
         : S.step === 'today'
