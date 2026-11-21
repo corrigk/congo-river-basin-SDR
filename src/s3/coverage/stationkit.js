@@ -34,7 +34,7 @@ export const DEFAULT_KIT = () => ({
   building: 'prefab', tower: 'lattice30', speaker: 'array', radio: 'repeater', backhaul: 'starlink',
   minorBuilding: 'shelter', minorMast: 'pole9', minorBackhaul: 'none', caretaker: false,
   crews: b('crew', 'crews'), people: b('crew', 'people'), days: b('crew', 'field_days'), team: b('crew', 'team'), dayH: b('crew', 'day_h'),
-  routine: b('visits', 'routine_yr'), repair: b('visits', 'repair_yr'), onsite: b('visits', 'onsite_h'), perRound: b('visits', 'per_round'),
+  routine: b('visits', 'routine_yr'), repair: b('visits', 'repair_yr'), onsite: b('visits', 'onsite_h'), perRound: b('visits', 'per_round'), faultWait: b('visits', 'fault_wait_d'),
   workDays: b('stay', 'work_days'), tDay: b('stay', 't_day_h'), hubs: true,
   fuelUsdL: b('crew', 'fuel_usd_l'), motorShare: b('crew', 'motor_share'), countPeople: false,
 });
@@ -72,13 +72,24 @@ function power(kit) {
   return { loads, normal, alert, battKwh, pvKwp, usd, battUsd: battKwh * 400 };
 }
 
-// The crews' workload per speaker a year, in team-days, and X.
-function workload(kit, r) {
-  const vDir = kit.routine + kit.repair, vStay = kit.routine * (kit.caretaker ? 0.5 : 1) + kit.repair;
-  const perD = (vDir * (kit.onsite + (2 * r.td) / kit.perRound)) / kit.dayH;
-  const perS = ((vStay * (kit.onsite + (2 * r.tl) / kit.perRound)) / kit.dayH) * (1 + (2 * r.tdep) / (kit.workDays * kit.dayH));
-  const cap = (kit.crews * kit.people * kit.days) / kit.team;
-  return { vDir, vStay, perD, perS, cap, X: cap / (r.s * perD + (1 - r.s) * perS) };
+// The crews' workload in team-days a year, counting whole trips per place (the crew-rounds simulation showed that
+// averaging over speakers undercounts): day trips share routine visits over a round and repairs over half a round;
+// every place crews stay at gets the routine stays its speakers need (at least one a year), plus repair trips for the
+// faults no stay picks up within the wait allowed (one trip takes the faults arriving in the wait). Caretakers halve
+// the routine visits and the faults that need a crew (simple repairs). Same formula: hubs_from_speakers.py need().
+function workload(kit, r, row, speakers) {
+  const W = kit.faultWait, cr = kit.caretaker ? 0.5 : 1, vR = kit.routine * cr, rep = kit.repair * cr, dh = kit.dayH;
+  const dayN = r.s * speakers;
+  const perD = (kit.routine * (kit.onsite + (2 * r.td) / kit.perRound) + rep * (kit.onsite + (2 * r.td) / Math.max(1, kit.perRound / 2))) / dh;
+  let routineStays = 0, repairTrips = 0, stayDays = 0, travelH = 0, stayVisits = 0;
+  for (const [c, sp, T, tl] of row?.stay_bins || []) {
+    const perStay = (kit.workDays * dh) / (kit.onsite + (2 * tl) / kit.perRound), nR = vR > 0 ? Math.ceil((sp * vR) / perStay) : 0;
+    const lr = sp * rep * (1 - Math.min(1, (nR * W) / 365)), m = lr / (1 + (lr * W) / 365);
+    routineStays += c * nR; repairTrips += c * m; stayDays += c * (nR * ((2 * T) / dh + kit.workDays) + m * ((2 * T) / dh + 1));
+    travelH += c * (nR + m) * 2 * T; stayVisits += c * sp * (vR + rep);
+  }
+  const need = dayN * perD + stayDays, cap = (kit.crews * kit.people * kit.days) / kit.team;
+  return { perD, cap, need, routineStays, repairTrips, stayDays, travelH, stayVisits, dayN, X: cap / (need / speakers) };
 }
 
 // cov: coverage.json (its hubs and stations). Returns the hub design, its capacity, how many, and its cost.
@@ -87,21 +98,19 @@ export function evaluateKit(kit, cov) {
   const H = cov.hubs, rows = H.sweep[String(kit.tDay)], speakers = H.speakers;
   const at = X => ({ s: interp(rows, X, 'share_direct'), td: interp(rows, X, 't_direct_h'), tdep: interp(rows, X, 't_dep_h'), tl: interp(rows, X, 't_loc_h') });
   let X = 500, r = at(X), w;
-  for (let i = 0; i < 8; i++) { w = workload(kit, r); X = Math.max(50, w.X); r = at(X); }
+  for (let i = 0; i < 8; i++) { w = workload(kit, r, nearestRow(rows, X), speakers); X = Math.max(50, w.X); r = at(X); }
   X = Math.floor(X);
   const nMajor = Math.max(1, Math.round(interp(rows, X, 'majors'))), nMinor = Math.round(interp(rows, X, 'minors')), nVillage = Math.round(interp(rows, X, 'village_stays'));
   const mShare = shares(rows, X, 'major_types'), nShare = shares(rows, X, 'minor_types');
   const types = Object.fromEntries(TYPES.map(t => [t, Math.round(nMajor * mShare[t])])), mtypes = Object.fromEntries(TYPES.map(t => [t, Math.round(nMinor * nShare[t])]));
 
   // ----- the crews' year -----
-  const stayN = (1 - r.s) * speakers, dayN = r.s * speakers;
-  const perStay = (kit.workDays * kit.dayH) / (kit.onsite + (2 * r.tl) / kit.perRound); // speakers worked per stay
-  const staysYr = (stayN * w.vStay) / perStay, daysPerStay = kit.workDays + (2 * r.tdep) / kit.dayH;
+  const staysYr = w.routineStays + w.repairTrips, daysPerStay = staysYr ? w.stayDays / staysYr : 0, perStay = (kit.workDays * kit.dayH) / (kit.onsite + (2 * r.tl) / kit.perRound);
   const avgCrews = crewsNeeded(nearestRow(rows, X).load_hist, X, kit), crews = Math.round(nMajor * avgCrews);
-  const rangers = crews * kit.people, rangerNights = staysYr * kit.team * daysPerStay;
-  const dayRoundsYr = (dayN * w.vDir) / kit.perRound;
-  // motorised hours a year, all hubs: day rounds, travel to and from the minor hubs, local rounds from them
-  const motorH = kit.motorShare * (dayRoundsYr * 2 * r.td + staysYr * 2 * r.tdep + ((stayN * w.vStay) / kit.perRound) * 2 * r.tl);
+  const rangers = crews * kit.people, rangerNights = w.stayDays * kit.team;
+  const dayRoundsYr = (w.dayN * (kit.routine + kit.repair)) / kit.perRound;
+  // motorised hours a year, all hubs: day rounds, travel to and from the places crews stay at, local rounds from them
+  const motorH = kit.motorShare * (dayRoundsYr * 2 * r.td + w.travelH + (w.stayVisits / kit.perRound) * 2 * r.tl);
 
   // ----- one major hub, by access -----
   const pw = power(kit), bh = opt('main', 'backhaul', kit.backhaul), bd = opt('main', 'building', kit.building), tw = opt('main', 'tower', kit.tower), sp = opt('main', 'speaker', kit.speaker), rd = opt('main', 'radio', kit.radio);
@@ -148,7 +157,7 @@ export function evaluateKit(kit, cov) {
   const spkM = sp.db ? rangeTo(value('ambient_night_dba') + value('margin_db'), { L0: sp.db, D: value('d_land_db'), airDbKm: value('air_db_km'), forestDb100: value('forest_db_100m'), clearingM: value('clearing_m') }) : 0;
   return {
     hubs: true, X, w, r, tDay: kit.tDay, nMajor, nMain: nMajor, crews, avgCrews, nMinor, nVillage, types, mtypes, speakers, perMajor: speakers / nMajor,
-    staysYr, daysPerStay, perStay, rangers, rangerNights, nightsPerRanger: rangerNights / rangers, dayRoundsYr, unserved: 0,
+    staysYr, routineStays: w.routineStays, repairTrips: w.repairTrips, daysPerStay, perStay, rangers, rangerNights, nightsPerRanger: rangerNights / rangers, dayRoundsYr, unserved: 0,
     parts, fixedCapex, power: pw, byType, majorTotal, avgMajor15: majorTotal / nMajor,
     minorParts, minorCapex0, minorByType, minorTotal, avgMinor15: nMinor ? minorTotal / nMinor : 0,
     salaries15, allowance15, stipends15, people15, total,
@@ -161,7 +170,7 @@ export function evaluateKit(kit, cov) {
 function evaluateDayTrips(kit, cov) {
   const st = cov.stations, rows = st.sweep[String(st.T_maint_h)];
   let X = st.X, td = 0;
-  for (let i = 0; i < 6; i++) { td = interp(rows, X, 'mean_trip_h'); X = workload({ ...kit, caretaker: false }, { s: 1, td, tdep: 0, tl: 0 }).X; }
+  for (let i = 0; i < 6; i++) { td = interp(rows, X, 'mean_trip_h'); X = workload({ ...kit, caretaker: false }, { s: 1, td }, null, st.assigned).X; }
   X = Math.max(20, Math.floor(X));
   const nMajor = Math.max(1, Math.round(interp(rows, X, 'stations'))), unserved = Math.round(interp(rows, X, 'unassigned'));
   const types = { road: 0, river: 0, remote: 0 };
@@ -179,7 +188,7 @@ function evaluateDayTrips(kit, cov) {
   const majorTotal = sum(TYPES.map(t => types[t] * byType[t].total15)), rangers = crews * kit.people;
   return {
     ...base, hubs: false, X, r: { s: 1, td, tdep: 0, tl: 0 }, nMajor, nMain: nMajor, crews, avgCrews, nMinor: 0, nVillage: 0, types, mtypes: { road: 0, river: 0, remote: 0 },
-    speakers, perMajor: speakers / nMajor, staysYr: 0, daysPerStay: 0, rangers, rangerNights: 0, nightsPerRanger: 0, dayRoundsYr, unserved,
+    speakers, perMajor: speakers / nMajor, staysYr: 0, routineStays: 0, repairTrips: 0, daysPerStay: 0, rangers, rangerNights: 0, nightsPerRanger: 0, dayRoundsYr, unserved,
     byType, majorTotal, avgMajor15: majorTotal / nMajor, minorTotal: 0, avgMinor15: 0,
     salaries15: rangers * KIT.crew.salary_usd_yr.base * LIFE, allowance15: 0, stipends15: 0, people15: 0, total: majorTotal,
   };
@@ -194,9 +203,9 @@ export const SETUPS = [
   { id: 'h12', name: 'Major + minor hubs, a long day out', kit: { hubs: true, tDay: 12, workDays: 3, caretaker: false, minorBuilding: 'shelter' },
     pros: ['Fewer major hubs', 'Three working days per stay'], cons: ['Long travel days on the river', 'Five- to six-day absences'] },
   { id: 'h24', name: 'Few major hubs, two days out', kit: { hubs: true, tDay: 24, workDays: 5, caretaker: false, minorBuilding: 'shelter' },
-    pros: ['Fewest major hubs', 'Crews concentrated where supplies are'], cons: ['Nine-day trips: many nights away for every ranger', 'Slow repair when a speaker fails', 'More fuel per visit'] },
+    pros: ['Fewest major hubs', 'Crews concentrated where supplies are'], cons: ['Nine-day trips: most field days are nights away', 'Slow repair when a speaker fails', 'More fuel per visit'] },
   { id: 'care', name: 'Hubs + village caretakers + rented rooms', kit: { hubs: true, caretaker: true, minorBuilding: 'rented' },
-    pros: ['Caretakers check speakers after each monthly test: half the routine visits', 'Rented rooms at health centres or schools cost little to set up'], cons: ['Depends on partners and caretakers', 'Stipends are a running people cost'] },
+    pros: ['Caretakers check speakers after each monthly test and do simple repairs: half the routine visits and half the repair trips', 'Rented rooms at health centres or schools cost little to set up'], cons: ['Depends on partners and caretakers', 'Stipends are a running people cost'] },
 ];
 export function evaluateSetups(kit, cov) {
   return SETUPS.map(s => ({ ...s, P: evaluateKit({ ...kit, ...s.kit }, cov) }));

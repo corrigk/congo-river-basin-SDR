@@ -234,6 +234,17 @@
    "base": 6,
    "basis": "estimate",
    "note": "A crew strings nearby speakers into one round"
+  },
+  "fault_wait_d": {
+   "label": "Longest a speaker fault waits for a trip",
+   "base": 21,
+   "options": [
+    7,
+    21,
+    45
+   ],
+   "basis": "estimate",
+   "note": "A trip to the same place within this picks the fault up; otherwise it gets a repair trip of its own"
   }
  },
  "opex": {
@@ -366,7 +377,7 @@
    "label": "Village caretaker at each minor hub (stipend)",
    "usd_yr": 360,
    "basis": "estimate",
-   "note": "$30 a month: keeps the hub, checks nearby speakers after each monthly test; assumed to halve the crews' routine visits"
+   "note": "$30 a month: keeps the hub, checks nearby speakers after each monthly test and does simple repairs (resets, fuses, battery swaps); assumed to halve the routine visits and the faults that need a crew"
   },
   "battery_life_yr": 8
  },

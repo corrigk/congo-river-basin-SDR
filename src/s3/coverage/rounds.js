@@ -31,7 +31,7 @@ export function simulate(M, kit, P) {
   const T = Array.from({ length: teams }, (_, j) => ({ id: j, free: 0, off: Math.floor((j * CYCLE) / teams), segs: [] }));
   const onDuty = (tm, d) => ((((Math.floor(d) + tm.off) % CYCLE) + CYCLE) % CYCLE) < onDays;
   const blockEnd = (tm, d) => { let e = Math.floor(d); while (onDuty(tm, e)) e++; return e; };
-  const vRoutine = kit.routine * (kit.caretaker ? 0.5 : 1);
+  const vRoutine = kit.routine * (kit.caretaker ? 0.5 : 1), fr = kit.caretaker ? 0.5 : 1; // caretakers: half the routine visits, half the faults (simple repairs)
   const jobs = [];
   M.places.forEach((p, pi) => {
     const tH = p.minutes / 60, travel = tH / kit.dayH;
@@ -39,7 +39,7 @@ export function simulate(M, kit, P) {
       const perDay = Math.max(1, Math.min(kit.perRound, Math.floor((kit.dayH - 2 * tH) / kit.onsite)));
       const n = Math.ceil((p.speakers * kit.routine) / perDay);
       for (let k = 0; k < n; k++) jobs.push({ pi, kind: 'day', day: ((k + r()) * YEAR) / n, dur: 1, travel: 0 });
-      for (let k = poisson(p.speakers * kit.repair, r); k > 0; k--) { const d = r() * YEAR; jobs.push({ pi, kind: 'day', repair: true, fault: d, day: d, dur: 1, travel: 0 }); }
+      for (let k = poisson(p.speakers * kit.repair * fr, r); k > 0; k--) { const d = r() * YEAR; jobs.push({ pi, kind: 'day', repair: true, fault: d, day: d, dur: 1, travel: 0 }); }
       return;
     }
     const perStay = (kit.workDays * kit.dayH) / (kit.onsite + (2 * (p.local_min / 60)) / kit.perRound);
@@ -47,11 +47,11 @@ export function simulate(M, kit, P) {
     const mine = [];
     for (let k = 0; k < n; k++) { const d = (((k + phase) * YEAR) / n) % YEAR, j = { pi, kind: 'stay', day: d, travel, work: kit.workDays, dur: 2 * travel + kit.workDays }; mine.push(j); jobs.push(j); }
     // faults: picked up by any trip to this place that starts within the wait allowed, else a repair trip of its own
-    const faults = Array.from({ length: poisson(p.speakers * kit.repair, r) }, () => r() * YEAR).sort((a, b) => a - b);
+    const faults = Array.from({ length: poisson(p.speakers * kit.repair * fr, r) }, () => r() * YEAR).sort((a, b) => a - b);
     for (const d of faults) {
-      const j = mine.find(x => x.day >= d && x.day - d <= V.wait);
+      const j = mine.find(x => x.day >= d && x.day - d <= kit.faultWait);
       if (j) (j.faults ||= []).push(d);
-      else { const nj = { pi, kind: 'stay', repair: true, day: d + V.wait, faults: [d], travel, work: 1, dur: 2 * travel + 1 }; mine.push(nj); jobs.push(nj); }
+      else { const nj = { pi, kind: 'stay', repair: true, day: d + kit.faultWait, faults: [d], travel, work: 1, dur: 2 * travel + 1 }; mine.push(nj); jobs.push(nj); }
     }
   });
   jobs.sort((a, b) => a.day - b.day);
@@ -112,12 +112,12 @@ function teamAt(tm, M, tau, dayH) {
 }
 
 // ----- the page -----
-const V = { major: 0, tau: 0, play: false, speed: 7, window: 'month', wait: 21, crewsAdd: 0 };
+const V = { major: 0, tau: 0, play: false, speed: 7, window: 'month', crewsAdd: 0 };
 let timer = 0, last = 0;
 
 export function roundsStep({ R, geo, cov, render }) {
   clearInterval(timer);
-  const kit = SHARED.kit || DEFAULT_KIT(), P = evaluateKit({ ...kit, hubs: true }, cov);
+  const kit = (SHARED.kit ||= DEFAULT_KIT()), P = evaluateKit({ ...kit, hubs: true }, cov);
   const M = R.majors[V.major], sim = simulate(M, kit, P);
   const cv = el('canvas', { class: 'rd-map', role: 'img', 'aria-label': `Map of the ${M.type} major hub, its ${M.places.length} places and the routes its crews take` });
   const gantt = el('canvas', { class: 'rd-gantt', role: 'img', 'aria-label': `Calendar of ${sim.teams.length} teams over the ${V.window}` });
@@ -217,7 +217,7 @@ export function roundsStep({ R, geo, cov, render }) {
   const pickWin = seg([['week', 'Week'], ['month', 'Month'], ['year', 'Year']], V.window, v => { V.window = v; render(); }, 'Calendar window');
   const pickSpeed = seg([[1, '1 day/s'], [7, '1 week/s'], [30, '1 month/s']], V.speed, v => { V.speed = v; render(); }, 'Speed');
   const labelled = (label, node) => el('div', { class: 'rd-opt' }, el('span', { text: label }), node);
-  const pickWait = labelled('A fault waits for a trip up to', seg([[7, '7 days'], [21, '21 days'], [45, '45 days']], V.wait, v => { V.wait = v; render(); }, 'Longest wait before a repair trip'));
+  const pickWait = labelled('A fault waits for a trip up to', seg([[7, '7 days'], [21, '21 days'], [45, '45 days']], kit.faultWait, v => { kit.faultWait = v; render(); }, 'Longest wait before a repair trip'));
   const pickCrews = labelled('Crews here', seg([[0, `${sim.crewsHere - V.crewsAdd} (design)`], [1, '+1'], [2, '+2']], V.crewsAdd, v => { V.crewsAdd = v; render(); }, 'Extra crews at this hub'));
   const over = s.busyShare > 1;
   const kpi = (b, t) => el('div', {}, el('b', { text: b }), el('span', { text: t }));

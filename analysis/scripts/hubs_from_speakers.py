@@ -24,10 +24,9 @@ Two steps, on the travel model of the SRR (travel.py: boat 25 km/h on rivers, 30
 X (speakers per major hub, with its most crews) comes from the crews (src/s3/coverage/stationkit.js, same formula);
 each major hub then gets only the crews its speakers need (the sweep keeps each X's spread of speakers per major):
   team-days a year   = crews x people per crew x field days / rangers per team
-  per speaker a year = visits x (on site + 2 x trip / speakers per round) / field-day hours            (day trips)
-                     = visits x (on site + 2 x local trip / per round) / field-day hours
-                       x (1 + 2 x trip to the minor hub / (work days per stay x field-day hours))      (stays)
-  X                  = team-days / (share on day trips x the first + share on stays x the second)
+  X                  = team-days / team-days needed per speaker a year (need(): whole trips per place, since the
+                       crew-rounds simulation showed averaging over speakers undercounts: every place crews stay at
+                       needs at least one full trip a year, and faults far out need repair trips of their own)
 
 Outputs data/hubs.json: the X sweep (major and minor hubs, trips, shares, access types), the default design's hubs
 for the map, and its 'alerts' coverage runs (people within radio reach or a 1-hour response of a major hub: minor hubs
@@ -50,6 +49,8 @@ T_DAYS = [8, 12, 24]
 T_DAY_RUN = [T_DAY]   # the T_day of the run in progress (summarise reports the share beyond it)
 MIN_MINOR, MIN_REMOTE, T_FAR = 10, 50, 24 * 60
 LOAD_BINS = [0, 10, 25, 50, 100, 200, 300, 450, 700, 1000, 1500, 2200, 3200, 5000, 1e9]
+STAY_SP = [0, 3, 6, 10, 20, 40, 80, 160, 1e9]          # speakers at a place crews stay at
+STAY_T = [0, 4, 6, 8, 10, 12, 16, 20, 1e9]             # hours from its major hub
 XS = [100, 200, 300, 500, 800, 1200, 2000, 3000, 5000]
 
 
@@ -144,8 +145,22 @@ def summarise(hubs, M, chunks, unassigned):
     load = np.array([t for _, t in M])
     hist = [[int(((load > lo) & (load <= hi)).sum()), round(float(load[(load > lo) & (load <= hi)].mean()), 1)]
             for lo, hi in zip(LOAD_BINS[:-1], LOAD_BINS[1:]) if ((load > lo) & (load <= hi)).any()]
+    # every place crews stay at (minor hub or village stay): its speakers, the trip from its major, the local trip;
+    # binned by speakers x trip, so the page can count whole trips per place (crew rounds showed averages undercount)
+    pl = {}
+    for m, i, s_, t in zip([c[0] for c in chunks], hi, sp, tm):
+        if t <= T_LOCAL: continue
+        a = pl.setdefault((m, int(i)), [0.0, 0.0]); a[0] += s_; a[1] += s_ * t
+    psp = np.array([a[0] for a in pl.values()]); pT = np.array([a[1] / a[0] for a in pl.values()]) / 60
+    ploc = np.array([hloc[i] for (_, i) in pl]) / 60
+    bins = []
+    for s0, s1 in zip(STAY_SP[:-1], STAY_SP[1:]):
+        for t0, t1 in zip(STAY_T[:-1], STAY_T[1:]):
+            k = (psp > s0) & (psp <= s1) & (pT > t0) & (pT <= t1)
+            if k.any(): bins.append([int(k.sum()), round(float(psp[k].mean()), 2), round(float(pT[k].mean()), 2), round(float(ploc[k].mean()), 2)])
     return {
         "load_hist": hist,                                                # [majors, mean speakers] per load bin: crews as needed
+        "stay_bins": bins,                                                # [places, mean speakers, trip h, local trip h]
         "majors": len(M), "major_sites": len({k for k, _ in M}), "minors": len(minors), "village_stays": len(village),
         "share_far": round(float(sp[tm > T_DAY_RUN[0]].sum() / sp.sum()), 3),
         "assigned": int(round(sp.sum())), "unassigned": int(round(unassigned)),
@@ -170,11 +185,26 @@ def x_from(sweep, kit):
     cap = kit["crews"] * kit["people"] * kit["days"] / kit["team"]
     X = 500
     for _ in range(8):
-        s, td, tdep, tl = interp(X, "share_direct"), interp(X, "t_direct_h"), interp(X, "t_dep_h"), interp(X, "t_loc_h")
-        per_d = kit["visits"] * (kit["onsite"] + 2 * td / kit["perRound"]) / kit["day_h"]
-        per_s = kit["visits"] * (kit["onsite"] + 2 * tl / kit["perRound"]) / kit["day_h"] * (1 + 2 * tdep / (kit["work_days"] * kit["day_h"]))
-        X = cap / (s * per_d + (1 - s) * per_s)
+        row = min(sweep, key=lambda r: abs(math.log(r["X"] / X)))
+        X = cap / need(row, interp(X, "share_direct"), interp(X, "t_direct_h"), kit)
     return int(X)
+
+
+def need(row, s, td, kit):
+    """Team-days a year per speaker, counting whole trips per place (stationkit.js, same formula):
+    day trips: routine visits shared over a round, repairs over half a round;
+    stays: each place at least one routine stay a year (its speakers' visits), plus repair trips for faults that
+    no stay picks up within the wait allowed (faults batch: one trip takes those arriving in the wait)."""
+    W, cr = kit["fault_wait"], 0.5 if kit["caretaker"] else 1
+    vR, rep, dh = kit["routine"] * cr, kit["repair"] * cr, kit["day_h"]
+    direct = s * (kit["routine"] * (kit["onsite"] + 2 * td / kit["perRound"]) + rep * (kit["onsite"] + 2 * td / max(1, kit["perRound"] / 2))) / dh
+    tot = 0.0
+    for c, sp, T_, tl in row["stay_bins"]:
+        per_stay = kit["work_days"] * dh / (kit["onsite"] + 2 * tl / kit["perRound"])
+        nR = math.ceil(sp * vR / per_stay) if vR > 0 else 0
+        lr = sp * rep * (1 - min(1, nR * W / 365)); m = lr / (1 + lr * W / 365)
+        tot += c * (nR * (2 * T_ / dh + kit["work_days"]) + m * (2 * T_ / dh + 1))
+    return direct + tot / row["assigned"]
 
 
 def main():
@@ -197,8 +227,8 @@ def main():
             print(f"  X {X:>5}: {s['majors']:>5} major ({s['major_types']}), {s['minors']:>5} minor + {s['village_stays']} village; far {s['share_far']:.0%}; day trips {s['share_direct']:.0%} "
                   f"({s['t_direct_h']} h), stays: {s['t_dep_h']} h out, {s['t_loc_h']} h local; unassigned {s['unassigned']:,}")
     kit = {"crews": KIT["crew"]["crews"]["base"], "people": KIT["crew"]["people"]["base"], "days": b("crew", "field_days"), "team": b("crew", "team"),
-           "day_h": b("crew", "day_h"), "visits": b("visits", "routine_yr") + b("visits", "repair_yr"), "onsite": b("visits", "onsite_h"),
-           "perRound": b("visits", "per_round"), "work_days": b("stay", "work_days")}
+           "day_h": b("crew", "day_h"), "routine": b("visits", "routine_yr"), "repair": b("visits", "repair_yr"), "onsite": b("visits", "onsite_h"),
+           "perRound": b("visits", "per_round"), "work_days": b("stay", "work_days"), "fault_wait": b("visits", "fault_wait_d"), "caretaker": False}
     td0 = int(T_DAY / 60)
     X = x_from(sweeps[str(td0)], kit)
     T_DAY_RUN[0] = td0 * 60

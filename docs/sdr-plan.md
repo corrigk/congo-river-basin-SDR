@@ -42,8 +42,9 @@ step uses those stations. Stage 3 (GRID3) replaces the proxy with no page change
 
 New Design page "Crew rounds" (from What's at a station): a year of three showcase major hubs (river, road, remote)
 simulated day by day and animated on their real routes, with a week / month / year calendar of who is where. It shows
-the hub design's crews are short by 1.5 to 2.5 times once repairs need their own trips; next: feed that back into the
-crew sizing (or add caretaker repairs), then seasons.
+the first hub cost model's crews were short by 1.5 to 2.5 times once repairs need their own trips. Recalibrated: the
+cost model counts whole trips per place and repair trips (fault wait 7 / 21 / 45 days; caretakers do simple repairs).
+Default now 791 major + 2,238 minor hubs, 2,799 rangers, $577M; the simulation agrees (72-99% of duty days). Next: seasons.
 
 ## Major and minor ranger hubs, 2026-11-20
 

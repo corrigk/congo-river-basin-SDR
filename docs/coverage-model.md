@@ -273,31 +273,42 @@ floor ($4k), remote ones a bigger spares cache and battery ($3k). Remote motor l
    speakers justifies one; smaller leftovers are long stays from the nearest major within two days. Every speaker is
    reached (day trips alone leave 23,413 beyond 8 h).
 
-**Crews.** Team-days a year = crews × people × field days (200) ÷ rangers per team (2). Per speaker a year: day trips
-visits × (hours on site + 2 × trip ÷ speakers per round) ÷ field-day hours (9); stays the same with the local trip,
-× (1 + 2 × trip to the minor hub ÷ (working days per stay × field-day hours)). X = team-days ÷ the mix. Most major
-hubs are set by reach, not capacity: each gets only the crews its speakers need (1.1 crews on average by default).
+**Crews (recalibrated with the crew-rounds simulation).** Team-days a year = crews × people × field days (200) ÷
+rangers per team (2). The work is counted in whole trips per place: day trips share routine visits over a round and
+repairs over half a round; every place crews stay at (minor hub or village stay) gets the routine stays its speakers
+need, at least one a year (working days per stay × field-day hours ÷ (hours on site + 2 × local trip ÷ speakers per
+round) speakers a stay), each costing 2 × trip ÷ field-day hours + working days; faults (0.3 a speaker a year) that no
+stay picks up within the wait allowed (7, 21 or 45 days; default 21) get repair trips of their own, one trip taking the
+faults that arrive in the wait (2 × trip ÷ field-day hours + 1 day). Caretakers halve the routine visits and the faults
+that need a crew (simple repairs). X = team-days ÷ team-days needed per speaker (761 by default, against 1,392 when the
+work was averaged over speakers). Most major hubs are set by reach, not capacity: each gets only the crews its
+speakers need (1.2 crews on average by default). The places are binned by speakers × trip in `hubs.json` (stay_bins)
+so the page can recount trips for any setting.
 
 **Cost, 15 years:** parts, access extras and vehicles × the logistics multiplier; 6% of capex a year maintenance;
 subscriptions and rent; battery swaps; vehicle replacement; fuel for the motorised legs (day rounds, travel to the
 minor hubs, local rounds). People costs are shown, not counted: salaries ($3k a ranger a year), field allowances ($10 a
 ranger a night away) and caretaker stipends; a switch counts the allowances and stipends.
 
-**Ranger setups compared (default kit):**
+**Ranger setups compared (default kit, recalibrated):**
 
 | Setup | Major | Minor + village stays | Rangers | Nights away / ranger / yr | 15 yr |
 | --- | --- | --- | --- | --- | --- |
-| Major hubs only, day trips | 833 | none | 2,499 | 0 | $426M, 23,413 speakers left out |
-| Minor hubs, one day out (8 h, 2 working days) | 979 | 2,016 + 4,542 | 3,135 | 33 | $638M |
-| **Minor hubs, a long day out (12 h, 3 days): default** | **730** | **2,225 + 4,690** | **2,448** | **48** | **$521M** |
-| Few major hubs, two days out (24 h, 5 days) | 299 | 2,389 + 4,794 | 1,224 | 114 | $320M |
-| Default + caretakers + rented rooms | 713 | 2,211 + 4,688 | 2,286 | 31 | $493M |
+| Major hubs only, day trips | 839 | none | 2,517 | 0 | $429M, 23,413 speakers left out |
+| Minor hubs, one day out (8 h, 2 working days) | 1,000 | 2,035 + 4,545 | 3,348 | 53 | $664M |
+| **Minor hubs, a long day out (12 h, 3 days): default** | **791** | **2,238 + 4,682** | **2,799** | **80** | **$577M** |
+| Few major hubs, two days out (24 h, 5 days) | 490 | 2,408 + 4,797 | 2,433 | 165 | $492M |
+| Default + caretakers (checks and simple repairs) + rented rooms | 748 | 2,230 + 4,689 | 2,574 | 60 | $528M |
+
+Before the recalibration the default was $521M with 730 major hubs and 2,448 rangers, and two days out $320M: averaging
+the work over speakers hid that every small place needs its own trip and that faults far out need repair trips.
 
 What it says: minor hubs reach every speaker, but they save money only when the major hubs can be fewer, which needs
-longer trips out; the price is rangers' time away (114 nights a year at two days out). The major-hub kit is the other
-lever: with containers, a 24 m guyed mast and a 600 W speaker the long-day design is about $380M, and with a 12 m mast
-and no hub loudspeaker about $336M. The old "main station + waypoint post" design ($212M) assumed 24 h circuits with
-$16.5k posts and no village stays; this one replaces it.
+longer trips out; the price is rangers' time away (165 nights a year at two days out, most of their field days).
+Caretakers who do simple repairs are the best lever on the default: fewer repair trips, $49M less, 20 fewer nights
+away a ranger, for $30 a month each. The major-hub kit is the other lever (containers, a lighter mast, no hub
+loudspeaker). The old "main station + waypoint post" design ($212M) assumed 24 h circuits with $16.5k posts and no
+village stays; this one replaces it.
 
 In the S-3 network step, the "Speakers" mode uses the major hubs (minor hubs are empty most of the time, so they do
 not count for the 1-hour response; the default's major hubs reach 43% of people by radio or a 1-hour response) and
@@ -319,10 +330,10 @@ one a year); speaker faults arrive at random (0.3 a speaker a year) and wait up 
 place, else get a repair trip of their own (one working day there); jobs go in date order to the team that can start
 soonest inside a duty block.
 
-**What it shows (default settings, faults wait up to 21 days):** the crews need more days than they have: 153% of
-their duty days at the river hub (1,298 speakers, 30 places, 2 crews), 120% at the road hub, 109% at the remote hub;
-repairs wait a median of 40 to 90 days. The cost model averages work over speakers; at real places every small minor
-hub needs at least one full trip a year, and faults far out need trips of their own (70 a year at the river hub). With
-one more crew and faults waiting up to 45 days for the next trip, the river hub fits (93%) with a median repair wait of
-27 days. So the hub design's crew numbers are optimistic by about 1.5 to 2.5 times until repairs are handled nearer the
-speaker (caretakers who can do simple repairs, spares at minor hubs) or crews are added. Seasons are not in yet.
+**What it showed, and the fix.** With the first cost model the crews needed more days than they had: 153% of their
+duty days at a river hub, 120% at a road hub, 109% at a remote hub, with repairs waiting a median of 40 to 90 days.
+The cost model averaged the work over speakers; at real places every small minor hub needs at least one full trip a
+year and faults far out need trips of their own. The cost model now counts whole trips per place (see Crews above), so
+the crew numbers rose (2,448 to 2,799 rangers by default) and the showcase hubs of the recalibrated design run at 72%
+to 99% of their duty days with repairs waiting a median of 22 to 38 days. The page's settings (fault wait, caretakers,
+extra crews) change both. Seasons are not in yet.
